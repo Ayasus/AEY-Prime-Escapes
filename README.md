@@ -10,7 +10,7 @@ The system aims to reduce the need for manual booking processes by providing a c
 
 The system is designed with a simple and user-friendly interface suitable for both customers and administrators.
 
-## 🎯 Objectives
+## Objectives
 
 The main objectives of AEY Prime Escapes are to:
 
@@ -21,7 +21,7 @@ The main objectives of AEY Prime Escapes are to:
 * Reduce manual processing of travel bookings.
 * Improve the overall travel planning experience.
 
-## ✨ Features
+## Features
 
 ### Customer Features
 
@@ -44,7 +44,7 @@ The main objectives of AEY Prime Escapes are to:
 * Update booking status
 * Monitor system activities
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 | Technology   | Purpose                                   |
 | ------------ | ----------------------------------------- |
@@ -58,7 +58,7 @@ The main objectives of AEY Prime Escapes are to:
 
 The current frontend project is configured with React 19, TypeScript 5.7, Vite 8, and Tailwind CSS 4.
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 AEY-Prime-Escapes/
@@ -141,7 +141,7 @@ npm run dev
 
 The project uses Vite as its development server.
 
-## 🗄️ Database
+## Database
 
 AEY Prime Escapes uses **Supabase** as its backend service.
 
@@ -158,7 +158,7 @@ The database is intended to store information such as:
 
 The frontend communicates with Supabase to store and retrieve system data.
 
-## 🔐 Authentication
+## Authentication
 
 The system uses user authentication to separate customer and administrator access.
 
@@ -172,7 +172,7 @@ User
 
 Customers can access travel and booking functions, while administrators can manage system records and reservations.
 
-## 🔄 Basic System Flow
+## Basic System Flow
 
 ```text
 User
@@ -196,7 +196,7 @@ Booking Status Updated
 Customer Views Reservation Status
 ```
 
-## 🧑‍💻 Development
+## Development
 
 To build the project for production:
 
@@ -212,7 +212,7 @@ pnpm preview
 
 The available project scripts include development, production build, preview, and formatting commands.
 
-## 🧹 Code Formatting
+## Code Formatting
 
 The project uses **oxfmt** for formatting.
 
@@ -222,7 +222,7 @@ Run:
 pnpm format
 ```
 
-## 🔧 Environment Variables
+## Environment Variables
 
 The following environment variables may be required:
 
@@ -233,7 +233,7 @@ VITE_SUPABASE_ANON_KEY=
 
 Make sure these values are configured before running features that require Supabase.
 
-## 📋 Future Improvements
+## Future Improvements
 
 Possible future improvements include:
 
@@ -248,13 +248,13 @@ Possible future improvements include:
 * Booking history
 * Printable booking receipts
 
-## 👥 Developers
+## Developers
 
 **AEY Prime Escapes**
 
 Developed as an Information Systems project.
 
-## 📄 License
+## License
 
 This project is intended for academic and educational purposes.
 
