@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --font-display: 'DM Serif Display', serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+
+  /* ── Primary brand dark (replaces navy) ── */
+  --color-navy:     #3D2B1F;
+  --color-navy-800: #2A1F17;
+  --color-navy-700: #4A3728;
+
+  /* ── Primary action: caramel tan (replaces emerald) ── */
+  --color-emerald:     #D4A373;
+  --color-emerald-600: #B8895A;
+  --color-emerald-700: #8B6239;
+  --color-emerald-100: #F5E2C8;
+  --color-emerald-50:  #FDF4E9;
+
+  /* ── Salmon blush secondary accent ── */
+  --color-blush:     #FCB9B2;
+  --color-blush-600: #F0958B;
+  --color-blush-100: #FDE8E6;
+  --color-blush-50:  #FEF4F3;
+
+  /* ── Page & surface backgrounds ── */
+  --color-offwhite: #FEFAE0;
+
+  /* ── Warm slate overrides ── */
+  --color-slate-50:  #FAEDCD;
+  --color-slate-100: #F2E0BB;
+  --color-slate-200: #E8D0A0;
+  --color-slate-300: #D9BC84;
+  --color-slate-400: #B89870;
+  --color-slate-500: #8B6F50;
+  --color-slate-600: #6B5138;
+  --color-slate-700: #4A3520;
+
+  /* ── Status badge supporting colors ── */
+  --color-blue-50:    #EFF6FF;
+  --color-blue-200:   #BFDBFE;
+  --color-blue-700:   #1D4ED8;
+  --color-amber-50:   #FFFBEB;
+  --color-amber-100:  #FEF3C7;
+  --color-amber-700:  #B45309;
+  --color-orange-50:  #FFF7ED;
+  --color-orange-700: #C2410C;
+  --color-red-400:    #F87171;
+  --color-red-50:     #FEF2F2;
+  --color-red-500:    #EF4444;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: var(--font-sans);
+  background-color: #FEFAE0;
+  color: #3D2B1F;
+}
+
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — AEY Prime Escapes</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="navbar-logo"><em>AEY</em>&nbsp;<span>Prime</span>&nbsp;Escapes</a>
+    <nav class="navbar-nav">
+      <a href="index.html">Buy</a>
+      <a href="new-developments.html">New Developments</a>
+      <a href="agents.html">Agents</a>
+      <a href="about.html" class="active">About</a>
+      <a href="my-reservations.html">My Reservations</a>
+    </nav>
+    <div class="navbar-actions">
+      <button class="btn btn-outline btn-sm" id="login-btn" onclick="openModal('auth-modal')">Login</button>
+      <div id="user-menu" class="hidden flex items-center gap-2">
+        <span class="text-xs font-semibold text-navy user-name"></span>
+        <button class="btn btn-sm btn-outline" id="logout-btn">Logout</button>
+      </div>
+      <button class="navbar-hamburger" id="hamburger">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="navbar-mobile" id="mobile-nav">
+    <a href="index.html">Buy</a>
+    <a href="new-developments.html">New Developments</a>
+    <a href="agents.html">Agents</a>
+    <a href="about.html">About</a>
+    <a href="my-reservations.html">My Reservations</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section style="background:var(--navy);padding:72px 0 56px;">
+  <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;">
+    <div>
+      <div class="hero-eyebrow">Established 2009</div>
+      <h1 style="font-family:var(--font-display);font-size:2.75rem;color:#fff;margin-bottom:16px;line-height:1.1;">Helping Families Find Their Perfect <em style="color:var(--emerald);">Escape</em></h1>
+      <p style="color:rgba(255,255,255,0.6);font-size:0.9375rem;line-height:1.8;">AEY Prime Escapes is the Philippines' most trusted boutique real estate agency. We combine deep market expertise with a genuinely personal approach to guide every client from first search to final key handover.</p>
+    </div>
+    <div style="border-radius:var(--radius-lg);overflow:hidden;height:320px;">
+      <img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80" alt="Our Team" style="width:100%;height:100%;object-fit:cover;" />
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<div style="background:#fff;border-bottom:1px solid var(--slate-100);">
+  <div class="container" style="display:grid;grid-template-columns:repeat(4,1fr);padding:28px 16px;">
+    <div class="stat-item"><div class="stat-val">15+</div><div class="stat-lbl">Years in Business</div></div>
+    <div class="stat-item"><div class="stat-val">8,200+</div><div class="stat-lbl">Happy Families</div></div>
+    <div class="stat-item"><div class="stat-val">₱12B+</div><div class="stat-lbl">Properties Sold</div></div>
+    <div class="stat-item"><div class="stat-val">48</div><div class="stat-lbl">Licensed Agents</div></div>
+  </div>
+</div>
+
+<!-- Mission & Values -->
+<section class="section">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:48px;">
+      <h2 style="font-family:var(--font-display);font-size:2rem;color:var(--navy);margin-bottom:12px;">Our Mission &amp; Values</h2>
+      <p style="font-size:0.9375rem;color:var(--slate-500);max-width:520px;margin:0 auto;">Every decision we make is guided by three core principles that have defined us since day one.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
+      <div style="background:#fff;border:1px solid var(--slate-100);border-radius:var(--radius-md);padding:28px;text-align:center;">
+        <div style="width:56px;height:56px;border-radius:16px;background:var(--navy);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg width="24" height="24" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3 style="font-size:1.125rem;font-weight:700;color:var(--navy);margin-bottom:8px;">People First</h3>
+        <p style="font-size:0.875rem;color:var(--slate-500);line-height:1.7;">We listen before we list. Every client's unique needs drive our search, not the other way around.</p>
+      </div>
+      <div style="background:#fff;border:1px solid var(--slate-100);border-radius:var(--radius-md);padding:28px;text-align:center;">
+        <div style="width:56px;height:56px;border-radius:16px;background:var(--emerald);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg width="24" height="24" fill="none" stroke="var(--navy)" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h3 style="font-size:1.125rem;font-weight:700;color:var(--navy);margin-bottom:8px;">Integrity Always</h3>
+        <p style="font-size:0.875rem;color:var(--slate-500);line-height:1.7;">We provide honest assessments, transparent pricing, and clear documentation with no hidden fees.</p>
+      </div>
+      <div style="background:#fff;border:1px solid var(--slate-100);border-radius:var(--radius-md);padding:28px;text-align:center;">
+        <div style="width:56px;height:56px;border-radius:16px;background:var(--blush);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+          <svg width="24" height="24" fill="none" stroke="var(--navy)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3 style="font-size:1.125rem;font-weight:700;color:var(--navy);margin-bottom:8px;">End-to-End Support</h3>
+        <p style="font-size:0.875rem;color:var(--slate-500);line-height:1.7;">From first inquiry to key handover, we stay with you throughout every step of the journey.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Story -->
+<section style="background:var(--slate-50);padding:64px 0;">
+  <div class="container-md">
+    <h2 style="font-family:var(--font-display);font-size:1.75rem;color:var(--navy);margin-bottom:20px;">Our Story</h2>
+    <div style="font-size:0.9375rem;color:var(--slate-600);line-height:1.9;display:flex;flex-direction:column;gap:16px;">
+      <p>AEY Prime Escapes was founded in 2009 by Aida Evaristo-Yuseco, a veteran real estate broker with a vision to create an agency that treated every client as family. Starting with a small team of five agents in Makati, AEY quickly grew through word-of-mouth built on honest service and genuine results.</p>
+      <p>By 2015, we had expanded to Cebu and Davao, establishing regional hubs that gave us true nationwide reach while maintaining the intimate, personal service that set us apart. Today, our 48-strong team of licensed brokers and specialists collectively manages over 1,200 active listings across all major Philippine property markets.</p>
+      <p>Our name carries meaning. "Prime" reflects our commitment to quality over quantity. "Escapes" reflects our belief that a home is not merely shelter — it is a sanctuary, a retreat, a place to exhale. We help families find not just a property, but their escape.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Offices -->
+<section class="section">
+  <div class="container">
+    <h2 style="font-family:var(--font-display);font-size:1.75rem;color:var(--navy);margin-bottom:8px;">Our Offices</h2>
+    <p style="font-size:0.875rem;color:var(--slate-500);margin-bottom:32px;">Visit us at any of our locations nationwide.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+      <div style="background:#fff;border:1px solid var(--slate-100);border-radius:var(--radius-md);padding:24px;">
+        <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--emerald);margin-bottom:8px;">Head Office</div>
+        <div style="font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:8px;">Metro Manila</div>
+        <p style="font-size:0.8125rem;color:var(--slate-500);line-height:1.7;">Unit 3204 Avida Tower, BGC<br>Taguig City, Metro Manila</p>
+        <a href="tel:09708769224" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:0.8125rem;font-weight:600;color:var(--emerald);text-decoration:none;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12"/></svg>
+          09708769224
+        </a>
+      </div>
+      <div style="background:#fff;border:1px solid var(--slate-100);border-radius:var(--radius-md);padding:24px;">
+        <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--emerald);margin-bottom:8px;">Visayas Hub</div>
+        <div style="font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:8px;">Cebu City</div>
+        <p style="font-size:0.8125rem;color:var(--slate-500);line-height:1.7;">8F Skyrise Building<br>Cebu Business Park, Cebu City</p>
+        <a href="tel:09708769224" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:0.8125rem;font-weight:600;color:var(--emerald);text-decoration:none;">09708769224</a>
+      </div>
+      <div style="background:#fff;border:1px solid var(--slate-100);border-radius:var(--radius-md);padding:24px;">
+        <div style="font-size:0.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--emerald);margin-bottom:8px;">Mindanao Hub</div>
+        <div style="font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:8px;">Davao City</div>
+        <p style="font-size:0.8125rem;color:var(--slate-500);line-height:1.7;">3F Abreeza Corporate Center<br>J.P. Laurel Ave, Davao City</p>
+        <a href="tel:09708769224" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:0.8125rem;font-weight:600;color:var(--emerald);text-decoration:none;">09708769224</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Careers -->
+<section id="careers" style="background:var(--navy);padding:48px 0;">
+  <div class="container" style="display:grid;grid-template-columns:1fr auto;gap:32px;align-items:center;">
+    <div>
+      <h2 style="font-family:var(--font-display);font-size:1.75rem;color:#fff;margin-bottom:8px;">Join the AEY Family</h2>
+      <p style="color:rgba(255,255,255,0.6);font-size:0.875rem;max-width:500px;">We're always looking for passionate, licensed real estate professionals who share our commitment to exceptional service. Competitive splits. Robust training. Real growth.</p>
+    </div>
+    <button class="btn btn-primary btn-lg" onclick="openModal('careers-modal')">Apply Now</button>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="site-footer-grid">
+      <div><div class="footer-brand-name"><em style="font-family:var(--font-display);font-style:italic;">AEY</em> <span>Prime</span> Escapes</div><p class="footer-brand-desc">Premium real estate services across the Philippines.</p></div>
+      <div class="footer-col"><div class="footer-col-title">Properties</div><ul><li><a href="index.html">Buy</a></li><li><a href="new-developments.html">New Developments</a></li></ul></div>
+      <div class="footer-col"><div class="footer-col-title">Company</div><ul><li><a href="about.html">About Us</a></li><li><a href="agents.html">Our Agents</a></li></ul></div>
+      <div class="footer-col"><div class="footer-col-title">Support</div><ul><li><a href="#">FAQ</a></li><li><a href="#">Privacy Policy</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">© 2025 AEY Prime Escapes. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- Careers Modal -->
+<div class="modal-overlay hidden" id="careers-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Apply to AEY Prime</div>
+      <button class="modal-close" onclick="closeModal('careers-modal')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form class="space-y" onsubmit="event.preventDefault();closeModal('careers-modal');showToast('Application submitted! We will be in touch soon.');">
+        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" placeholder="Your name" required /></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" placeholder="you@email.com" required /></div>
+        <div class="form-group"><label class="form-label">PRC License Number</label><input type="text" class="form-input" placeholder="REB-XXXXXXXX" /></div>
+        <div class="form-group"><label class="form-label">Years of Experience</label><select class="form-select"><option>Less than 1 year</option><option>1–3 years</option><option>3–5 years</option><option>5–10 years</option><option>10+ years</option></select></div>
+        <div class="form-group"><label class="form-label">Cover Letter</label><textarea class="form-textarea" rows="3" placeholder="Tell us why you want to join AEY Prime Escapes…"></textarea></div>
+        <button type="submit" class="btn btn-dark btn-full btn-lg">Submit Application</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="modal-overlay hidden" id="auth-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Sign In to AEY Prime</div>
+      <button class="modal-close" onclick="closeModal('auth-modal')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form id="login-form" class="space-y">
+        <div class="form-group"><label class="form-label">Email address</label><input id="login-email" type="email" class="form-input" placeholder="you@example.com" required /></div>
+        <div class="form-group"><label class="form-label">Password</label><input id="login-pass" type="password" class="form-input" placeholder="Enter password" required /></div>
+        <button type="submit" class="btn btn-dark btn-full btn-lg">Sign In</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>

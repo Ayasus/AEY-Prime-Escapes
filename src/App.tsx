@@ -1,0 +1,2639 @@
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import {
+  PROPERTIES, AGENTS, CATEGORY_COUNTS,
+  formatPrice, formatPriceFull, monthlyMortgage,
+  type Property,
+} from "./data";
+
+// ─── Page type ────────────────────────────────────────────────────────────────
+type Page = "buy" | "new-developments" | "agents" | "about" | "pdp" | "my-reservations";
+
+// ─── Inline Icons ─────────────────────────────────────────────────────────────
+const Ic = {
+  Search: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+  Pin: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
+  Bed: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>,
+  Bath: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6 6.5 3.5a1.5 1.5 0 0 0-1-.5C4.683 3 4 3.683 4 4.5V17a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><line x1="10" x2="8" y1="5" y2="7"/><line x1="2" x2="22" y1="12" y2="12"/></svg>,
+  Area: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>,
+  Bookmark: ({ filled }: { filled: boolean }) => <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>,
+  Filter: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+  ChevronRight: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+  ArrowLeft: () => <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,
+  X: () => <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+  Check: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  Eye: ({ open }: { open: boolean }) => open
+    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>,
+  Upload: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
+  Download: () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+  Phone: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+  Mail: () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>,
+  Photos: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
+  Shield: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  Car: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17H5v2H3v-6l2.5-7h13L21 13v6h-2v-2z"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>,
+  Pool: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M8 6h.01"/><path d="M8 6a4 4 0 0 1 4-4"/><path d="M12 2v10"/></svg>,
+  Tree: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76l1 4.88-1.24.12"/><path d="M9 18.12V22"/></svg>,
+  Zap: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  FileText: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,
+  Wifi: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" x2="12.01" y1="20" y2="20"/></svg>,
+  Building: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></svg>,
+  Star: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  Award: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>,
+  Users: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  Home: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  Menu: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
+  Google: () => <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>,
+  Apple: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>,
+};
+
+// ─── Logo ─────────────────────────────────────────────────────────────────────
+function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  const s = size === "lg" ? "w-10 h-10 text-base" : size === "sm" ? "w-6 h-6 text-xs" : "w-8 h-8 text-sm";
+  const text = size === "lg" ? "text-xl" : size === "sm" ? "text-base" : "text-lg";
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className={`${s} rounded-xl bg-navy flex items-center justify-center flex-shrink-0`}>
+        <span className="font-bold text-emerald" style={{ fontFamily: "var(--font-display)" }}>A</span>
+      </div>
+      <div className="leading-none">
+        <span className={`font-bold text-navy ${text} tracking-tight`} style={{ fontFamily: "var(--font-display)" }}>
+          AEY Prime<span style={{ color: "#D4A373" }}> Escapes</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: string }) {
+  const cfg: Record<string, string> = {
+    "For Sale":           "bg-blush-100 text-blush-600 border border-blush-100",
+    "Pre-Selling":        "bg-blue-50 text-blue-700 border border-blue-200",
+    "Reserved":           "bg-amber-50 text-amber-700 border border-amber-200",
+    "Under Negotiation":  "bg-orange-50 text-orange-700 border border-orange-200",
+    "Sold":               "bg-slate-100 text-slate-500 border border-slate-200",
+  };
+  return (
+    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full whitespace-nowrap ${cfg[status] ?? cfg["For Sale"]}`}>
+      {status}
+    </span>
+  );
+}
+
+// ─── Property Card ────────────────────────────────────────────────────────────
+function PropertyCard({ property, onClick }: { property: Property; onClick: () => void }) {
+  const [saved, setSaved] = useState(false);
+  const isReserved = property.status === "Reserved" || property.status === "Sold";
+
+  return (
+    <div
+      onClick={onClick}
+      className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+    >
+      <div className="relative overflow-hidden bg-slate-200 aspect-[4/3]">
+        <img
+          src={property.images[0]}
+          alt={property.title}
+          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${isReserved ? "grayscale-[30%]" : ""}`}
+        />
+        {isReserved && <div className="absolute inset-0 bg-navy/20" />}
+        <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
+          <StatusBadge status={property.status} />
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-navy/80 text-white">{property.type}</span>
+        </div>
+        {property.isNewDevelopment && (
+          <div className="absolute bottom-3 left-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blush text-navy">New Dev · {property.completionDate}</span>
+          </div>
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); setSaved(!saved); }}
+          className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${saved ? "bg-emerald text-navy" : "bg-white/90 text-slate-600 hover:bg-white"}`}
+        >
+          <Ic.Bookmark filled={saved} />
+        </button>
+      </div>
+      <div className="p-4">
+        <p className="text-xl font-bold text-navy leading-tight">{formatPrice(property.price)}</p>
+        <p className="text-sm font-semibold text-navy mt-0.5 line-clamp-1">{property.title}</p>
+        <div className="flex items-center gap-1 text-slate-500 text-xs mt-1">
+          <Ic.Pin /><span className="line-clamp-1">{property.city}</span>
+        </div>
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 text-slate-500 text-xs">
+          {property.beds !== null && <span className="flex items-center gap-1"><Ic.Bed />{property.beds} Beds</span>}
+          {property.baths !== null && <span className="flex items-center gap-1"><Ic.Bath />{property.baths} Baths</span>}
+          <span className="flex items-center gap-1"><Ic.Area />{property.lotArea} m²</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Filter Drawer ────────────────────────────────────────────────────────────
+interface FilterState {
+  minPrice: number; maxPrice: number;
+  minArea: number;  maxArea: number;
+  beds: string;     baths: string;
+}
+const defaultFilters: FilterState = { minPrice: 0, maxPrice: 100_000_000, minArea: 0, maxArea: 2000, beds: "Any", baths: "Any" };
+
+function FilterDrawer({ open, onClose, filters, setFilters }: {
+  open: boolean; onClose: () => void;
+  filters: FilterState; setFilters: (f: FilterState) => void;
+}) {
+  const [local, setLocal] = useState<FilterState>(filters);
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative ml-auto w-full max-w-sm bg-white h-full flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <h3 className="text-lg font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Filters</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><Ic.X /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-7">
+          <div>
+            <label className="text-sm font-semibold text-navy block mb-3">Price Range</label>
+            <div className="flex gap-3">
+              {(["minPrice", "maxPrice"] as const).map((k) => (
+                <div key={k} className="flex-1">
+                  <span className="text-xs text-slate-500 block mb-1">{k === "minPrice" ? "Min" : "Max"}</span>
+                  <input type="number" value={local[k]} onChange={(e) => setLocal({ ...local, [k]: Number(e.target.value) })}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-navy block mb-3">Lot Area (m²)</label>
+            <div className="flex gap-3">
+              {(["minArea", "maxArea"] as const).map((k) => (
+                <div key={k} className="flex-1">
+                  <span className="text-xs text-slate-500 block mb-1">{k === "minArea" ? "Min" : "Max"}</span>
+                  <input type="number" value={local[k]} onChange={(e) => setLocal({ ...local, [k]: Number(e.target.value) })}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald" />
+                </div>
+              ))}
+            </div>
+          </div>
+          {[{ label: "Bedrooms", key: "beds", opts: ["Any","1","2","3","4","5+"] }, { label: "Bathrooms", key: "baths", opts: ["Any","1","2","3","4+"] }].map(({ label, key, opts }) => (
+            <div key={key}>
+              <label className="text-sm font-semibold text-navy block mb-3">{label}</label>
+              <div className="flex gap-2">
+                {opts.map((v) => (
+                  <button key={v} onClick={() => setLocal({ ...local, [key]: v })}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${(local as any)[key] === v ? "bg-navy text-white border-navy" : "bg-white text-slate-600 border-slate-200 hover:border-navy"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+          <button onClick={() => setLocal(defaultFilters)} className="flex-1 py-3 rounded-xl border border-slate-200 text-navy text-sm font-semibold hover:bg-slate-50">Reset</button>
+          <button onClick={() => { setFilters(local); onClose(); }} className="flex-1 py-3 rounded-xl bg-emerald text-navy text-sm font-semibold hover:bg-emerald-600">Apply</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Auth Modal ───────────────────────────────────────────────────────────────
+type AuthMode = "login" | "signup";
+interface AuthModalProps {
+  property: Property;
+  actionLabel: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps) {
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [showPw, setShowPw] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [loading, setLoading] = useState(false);
+
+  const heading = mode === "login"
+    ? `Sign in to ${actionLabel}`
+    : `Create an account to ${actionLabel}`;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => { setLoading(false); onSuccess(); }, 1200);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-navy/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[95vh]">
+
+        {/* Property context bar */}
+        <div className="flex items-center gap-3 px-5 py-3 bg-slate-50 border-b border-slate-100">
+          <img src={property.images[0]} alt={property.title}
+            className="w-12 h-12 rounded-xl object-cover bg-slate-200 flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-navy truncate">{property.title}</p>
+            <p className="text-xs text-slate-500 truncate">{property.city}</p>
+          </div>
+          <div className="ml-auto flex-shrink-0 text-right">
+            <p className="text-sm font-bold text-emerald">{formatPrice(property.price)}</p>
+            <StatusBadge status={property.status} />
+          </div>
+          <button onClick={onClose} className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-300 transition-colors ml-1">
+            <Ic.X />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <Logo size="sm" />
+            <h2 className="text-xl font-bold text-navy mt-4 leading-snug" style={{ fontFamily: "var(--font-display)" }}>{heading}</h2>
+            <p className="text-xs text-slate-500 mt-1.5">Your account keeps your reservation hold and docs secure.</p>
+          </div>
+
+          {/* Social buttons */}
+          <div className="space-y-2.5 mb-5">
+            <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-slate-200 text-navy text-sm font-semibold hover:bg-slate-50 transition-colors">
+              <Ic.Google /> Continue with Google
+            </button>
+            <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-navy text-white text-sm font-semibold hover:bg-navy-800 transition-colors">
+              <Ic.Apple /> Continue with Apple
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs text-slate-400 font-medium">or sign in with email</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Full Name</label>
+                <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder=""
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-semibold text-navy block mb-1.5">Email Address</label>
+              <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="juan@email.com"
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+            </div>
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Phone Number</label>
+                <input type="tel" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="+63 9XX XXX XXXX"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+              </div>
+            )}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-navy">Password</label>
+                {mode === "login" && (
+                  <button type="button" className="text-xs text-emerald font-medium hover:underline">Forgot Password?</button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type={showPw ? "text" : "password"}
+                  required
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition"
+                />
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                  <Ic.Eye open={showPw} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-3.5 rounded-xl text-navy text-sm font-bold transition-all mt-2 ${loading ? "bg-emerald/60 cursor-not-allowed" : "bg-emerald hover:bg-emerald-600"}`}
+            >
+              {loading ? "Verifying…" : mode === "login" ? "Sign In & Continue" : "Create Account & Continue"}
+            </button>
+          </form>
+        </div>
+
+        {/* Tab switcher */}
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-center gap-1 text-sm">
+          {mode === "login" ? (
+            <>
+              <span className="text-slate-500">Don't have an account?</span>
+              <button onClick={() => setMode("signup")} className="font-semibold hover:underline" style={{ color: "#D4A373" }}>Create one</button>
+            </>
+          ) : (
+            <>
+              <span className="text-slate-500">Already have an account?</span>
+              <button onClick={() => setMode("login")} className="font-semibold hover:underline" style={{ color: "#D4A373" }}>Log in</button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reservation Record type (shared) ────────────────────────────────────────
+type ReservationRecord = {
+  id: string;
+  property: Property;
+  plan: "reservation" | "downpayment";
+  mop: string;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string;
+  dateCreated: string;
+  status: "Active" | "Pending Payment" | "For Review" | "Completed";
+  amtPaid: number;
+  loanYears?: number;
+  downPct?: number;
+};
+
+const MOP_LABELS: Record<string, string> = {
+  gcash: "GCash / Maya", bank: "Bank Transfer (InstaPay)",
+  card: "Credit / Debit Card", cash: "Cash / Over the Counter",
+};
+
+function calcMonthly(price: number, downPct = 20, years = 20) {
+  const loan = price * (1 - downPct / 100);
+  const r = 0.065 / 12, n = years * 12;
+  return Math.round((loan * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1));
+}
+
+function printReceipt(rec: ReservationRecord) {
+  const price = rec.property.price;
+  const balance = price - rec.amtPaid;
+  const dp = rec.downPct ?? 20;
+  const ly = rec.loanYears ?? 20;
+  const monthly = calcMonthly(price, dp, ly);
+  const loanAmt = Math.round(price * (1 - dp / 100));
+  const totalPaid = monthly * ly * 12 + Math.round(price * dp / 100);
+  const totalInterest = totalPaid - price;
+  const mopLabel = MOP_LABELS[rec.mop] ?? rec.mop;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reservation Receipt – ${rec.id}</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #3D2B1F; background: #fff; margin: 0; padding: 0; }
+  .page { max-width: 600px; margin: 0 auto; padding: 40px 32px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #3D2B1F; padding-bottom: 20px; margin-bottom: 24px; }
+  .brand { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .brand span { color: #D4A373; }
+  .receipt-id { font-family: monospace; font-size: 11px; color: #8B6F50; margin-top: 4px; }
+  h2 { font-size: 18px; font-weight: 700; margin: 0 0 16px; }
+  .section { margin-bottom: 24px; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8B6F50; margin-bottom: 10px; border-bottom: 1px solid #E8D0A0; padding-bottom: 4px; }
+  .row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .row .label { color: #8B6F50; }
+  .row .value { font-weight: 600; text-align: right; }
+  .total-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; padding-top: 10px; border-top: 1px solid #E8D0A0; margin-top: 6px; }
+  .total-row .value { color: #D4A373; }
+  .property-block { display: flex; gap: 16px; align-items: flex-start; background: #FAEDCD; border-radius: 12px; padding: 14px; margin-bottom: 8px; }
+  .property-block img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; }
+  .property-block .info { flex: 1; }
+  .property-block .title { font-weight: 700; font-size: 14px; }
+  .property-block .sub { font-size: 11px; color: #8B6F50; margin-top: 2px; }
+  .property-block .price { font-weight: 800; font-size: 15px; color: #D4A373; margin-top: 6px; }
+  .amort { background: #FAEDCD; border-radius: 10px; padding: 14px; margin-top: 10px; }
+  .amort .highlight { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; margin-top: 8px; padding-top: 8px; border-top: 1px solid #D9BC84; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #E8D0A0; font-size: 10px; color: #B89870; display: flex; justify-content: space-between; }
+  .status-badge { display: inline-block; background: #D4F8E8; color: #065F46; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style></head><body><div class="page">
+  <div class="header">
+    <div>
+      <div class="brand">AEY Prime <span>Escapes</span></div>
+      <div class="receipt-id">Official Reservation Receipt</div>
+    </div>
+    <div style="text-align:right">
+      <div class="status-badge">Active</div>
+      <div class="receipt-id" style="margin-top:6px">${rec.id}</div>
+      <div style="font-size:11px;color:#8B6F50;margin-top:2px">${rec.dateCreated}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Property</div>
+    <div class="property-block">
+      <img src="${rec.property.images[0]}" alt="${rec.property.title}" />
+      <div class="info">
+        <div class="title">${rec.property.title}</div>
+        <div class="sub">${rec.property.address}, ${rec.property.city}</div>
+        <div class="price">₱${price.toLocaleString("en-PH")}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Buyer Information</div>
+    <div class="row"><span class="label">Full Name</span><span class="value">${rec.buyerName || "—"}</span></div>
+    <div class="row"><span class="label">Email</span><span class="value">${rec.buyerEmail || "—"}</span></div>
+    <div class="row"><span class="label">Phone</span><span class="value">${rec.buyerPhone || "—"}</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Payment Details</div>
+    <div class="row"><span class="label">Payment Plan</span><span class="value">${rec.plan === "downpayment" ? "20% Down Payment" : "Reservation Fee Only"}</span></div>
+    <div class="row"><span class="label">Mode of Payment</span><span class="value">${mopLabel}</span></div>
+    <div class="row"><span class="label">Total Property Price</span><span class="value">₱${price.toLocaleString("en-PH")}</span></div>
+    <div class="row"><span class="label">Amount Paid Today</span><span class="value">₱${rec.amtPaid.toLocaleString("en-PH")}</span></div>
+    <div class="total-row"><span>Remaining Balance</span><span class="value">₱${balance.toLocaleString("en-PH")}</span></div>
+  </div>
+
+  ${rec.plan === "downpayment" ? `<div class="section">
+    <div class="section-title">Monthly Amortization Estimate</div>
+    <div class="amort">
+      <div class="row"><span class="label">Down Payment (${dp}%)</span><span class="value">₱${Math.round(price * dp / 100).toLocaleString("en-PH")}</span></div>
+      <div class="row"><span class="label">Loan Amount (${100 - dp}%)</span><span class="value">₱${loanAmt.toLocaleString("en-PH")}</span></div>
+      <div class="row"><span class="label">Interest Rate</span><span class="value">6.5% per annum</span></div>
+      <div class="row"><span class="label">Loan Term</span><span class="value">${ly} years (${ly * 12} months)</span></div>
+      <div class="row"><span class="label">Total Interest</span><span class="value">₱${totalInterest.toLocaleString("en-PH")}</span></div>
+      <div class="row"><span class="label">Total Amount Paid</span><span class="value">₱${totalPaid.toLocaleString("en-PH")}</span></div>
+      <div class="highlight"><span>Monthly Payment</span><span style="color:#D4A373">₱${monthly.toLocaleString("en-PH")}</span></div>
+    </div>
+    <p style="font-size:10px;color:#B89870;margin-top:8px">*Estimate only. Final rate subject to bank approval. Rate may vary.</p>
+  </div>` : ""}
+
+  <div class="section">
+    <div class="section-title">Assigned Agent</div>
+    <div class="row"><span class="label">Name</span><span class="value">${rec.property.agent.name}</span></div>
+    <div class="row"><span class="label">Agency</span><span class="value">${rec.property.agent.agency}</span></div>
+    <div class="row"><span class="label">Contact</span><span class="value">${rec.property.agent.phone}</span></div>
+  </div>
+
+  <div class="footer">
+    <span>AEY Prime Escapes · Licensed by HLURB · PRC Accredited Brokerage</span>
+    <span>Printed ${new Date().toLocaleDateString("en-PH")}</span>
+  </div>
+</div></body></html>`;
+
+  const win = window.open("", "_blank", "width=700,height=900");
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); }, 400);
+}
+
+// ─── Reservation Modal ────────────────────────────────────────────────────────
+function ReservationModal({ property, onClose, onReserved }: {
+  property: Property; onClose: () => void;
+  onReserved?: (rec: ReservationRecord) => void;
+}) {
+  const [step, setStep] = useState(1);
+  const [plan, setPlan] = useState<"reservation" | "downpayment" | null>(null);
+  const [loanYears, setLoanYears] = useState(20);
+  const [downPct, setDownPct] = useState(20);
+  const [mop, setMop] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", phone: "", contact: "Email", idFile: "" });
+  const [reservationId] = useState(`AEY-${Date.now().toString(36).toUpperCase()}`);
+
+  const price = property.price;
+  const reservationFee = 50000;
+  const downPaymentAmt = Math.round(price * downPct / 100);
+  const loanAmt = price - downPaymentAmt;
+  const r = 0.065 / 12;
+  const nMonths = loanYears * 12;
+  const monthly = Math.round((loanAmt * r * Math.pow(1 + r, nMonths)) / (Math.pow(1 + r, nMonths) - 1));
+  const totalPaid = monthly * nMonths + downPaymentAmt;
+  const totalInterest = totalPaid - price;
+
+  const amtDueToday = plan === "downpayment" ? downPaymentAmt : reservationFee;
+  const stepLabel = ["Choose a Plan", "Buyer Information", "Mode of Payment", "Payment Receipt"];
+  const canProceed = step !== 3 || (!!mop && !!plan);
+
+  const PAYMENT_MODES = [
+    { id: "gcash", label: "GCash / Maya", desc: "Scan QR or send to 09708769224" },
+    { id: "bank", label: "Bank Transfer (InstaPay)", desc: "BDO · BPI · UnionBank supported" },
+    { id: "card", label: "Credit / Debit Card", desc: "Visa, Mastercard, JCB" },
+    { id: "cash", label: "Cash / Over the Counter", desc: "Visit our office to pay directly" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-navy/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <div>
+            <div className="flex gap-1 mb-1">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className={`h-1 rounded-full transition-all ${i < step ? "bg-emerald" : "bg-slate-200"} ${i === step - 1 ? "w-6" : "w-3"}`} />
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Step {step} of 4 — {stepLabel[step - 1]}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"><Ic.X /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+
+          {/* Step 1 — Choose Plan */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Reserve This Property</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Choose how you want to secure this unit today.</p>
+              </div>
+              {/* Property card */}
+              <div className="rounded-2xl border border-slate-100 overflow-hidden flex gap-3 p-3">
+                <img src={property.images[0]} alt={property.title} className="w-20 h-20 rounded-xl object-cover flex-shrink-0 bg-slate-200" />
+                <div className="min-w-0">
+                  <p className="font-bold text-navy text-sm">{property.title}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 truncate">{property.city}</p>
+                  <p className="text-base font-bold mt-1" style={{ color: "#D4A373" }}>{formatPriceFull(price)}</p>
+                </div>
+              </div>
+
+              {/* Plan options */}
+              <div className="space-y-3">
+                <button onClick={() => setPlan("reservation")}
+                  className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${plan === "reservation" ? "border-navy bg-slate-50" : "border-slate-200 hover:border-slate-300"}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-navy text-sm">Reservation Fee Only</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Lock the property for 30 days with a refundable fee</p>
+                    </div>
+                    {plan === "reservation" && <span className="text-emerald"><Ic.Check /></span>}
+                  </div>
+                  <p className="text-xl font-bold text-navy mt-2">{formatPriceFull(reservationFee)}</p>
+                  <p className="text-[11px] text-slate-400">Due today · Fully refundable within 7 days</p>
+                </button>
+
+                <button onClick={() => setPlan("downpayment")}
+                  className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${plan === "downpayment" ? "border-navy bg-slate-50" : "border-slate-200 hover:border-slate-300"}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-navy text-sm">Down Payment</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Secure ownership — balance financed via bank loan</p>
+                    </div>
+                    {plan === "downpayment" && <span className="text-emerald"><Ic.Check /></span>}
+                  </div>
+                  <p className="text-xl font-bold text-navy mt-2">{formatPriceFull(downPaymentAmt)}</p>
+                  <p className="text-[11px] text-slate-400">Due today ({downPct}% of total) · {formatPrice(monthly)}/mo for {loanYears} yrs</p>
+                </button>
+              </div>
+
+              {/* Loan calculator — only when downpayment selected */}
+              {plan === "downpayment" && (
+                <div className="bg-slate-50 rounded-2xl p-4 space-y-4 border border-slate-200">
+                  <p className="text-xs font-bold text-navy uppercase tracking-widest">Loan Calculator</p>
+
+                  {/* Down payment % slider */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-xs font-semibold text-navy">Down Payment</label>
+                      <span className="text-sm font-bold text-navy">{downPct}% — {formatPriceFull(downPaymentAmt)}</span>
+                    </div>
+                    <input type="range" min={10} max={50} step={5} value={downPct} onChange={(e) => setDownPct(Number(e.target.value))}
+                      className="w-full accent-navy h-1.5 rounded-full" />
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-0.5"><span>10%</span><span>50%</span></div>
+                  </div>
+
+                  {/* Loan term selector */}
+                  <div>
+                    <label className="text-xs font-semibold text-navy block mb-2">Loan Term</label>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[5, 10, 15, 20, 25].map((y) => (
+                        <button key={y} onClick={() => setLoanYears(y)}
+                          className={`py-2 rounded-xl text-xs font-bold transition-colors ${loanYears === y ? "bg-navy text-white" : "bg-white border border-slate-200 text-navy hover:border-navy"}`}>
+                          {y}yr
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Live result */}
+                  <div className="bg-white rounded-xl p-3 border border-slate-200 space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-slate-500">Property Price</span><span className="font-semibold">{formatPriceFull(price)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Down Payment ({downPct}%)</span><span className="font-semibold">{formatPriceFull(downPaymentAmt)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Loan Amount</span><span className="font-semibold">{formatPriceFull(loanAmt)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Interest Rate</span><span className="font-semibold">6.5% p.a.</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Loan Term</span><span className="font-semibold">{loanYears} years ({nMonths} months)</span></div>
+                    <div className="border-t border-slate-200 pt-2 space-y-1.5">
+                      <div className="flex justify-between font-bold text-base">
+                        <span className="text-navy">Monthly Payment</span>
+                        <span style={{ color: "#D4A373" }}>{formatPriceFull(monthly)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs"><span className="text-slate-500">Total Amount Paid</span><span className="font-semibold">{formatPriceFull(totalPaid)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-slate-500">Total Interest</span><span className="font-semibold text-slate-600">{formatPriceFull(totalInterest)}</span></div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Estimate only. Final rate subject to bank approval. Rate may vary.</p>
+                </div>
+              )}
+
+              {/* Reservation fee breakdown */}
+              {plan === "reservation" && (
+                <div className="bg-slate-50 rounded-2xl p-4 space-y-2 text-sm">
+                  <p className="text-xs font-bold text-navy mb-3">Payment Breakdown</p>
+                  <div className="flex justify-between"><span className="text-slate-600">Total Property Price</span><span className="font-semibold">{formatPriceFull(price)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Reservation Fee</span><span className="font-semibold">{formatPriceFull(reservationFee)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-600">Balance (after reservation)</span><span className="font-semibold">{formatPriceFull(price - reservationFee)}</span></div>
+                  <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-navy"><span>Due Today</span><span style={{ color: "#D4A373" }}>{formatPriceFull(reservationFee)}</span></div>
+                </div>
+              )}
+
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700">
+                <strong>Note:</strong> Final financing terms are subject to bank approval. Our agents will assist you through the full loan process.
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 — Buyer Info */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Buyer Information</h2>
+              {([["Full Name","name","text","Juan dela Cruz"],["Email Address","email","email","juan@email.com"],["Phone Number","phone","tel","+63 9XX XXX XXXX"]] as const).map(([label, key, type, ph]) => (
+                <div key={key}>
+                  <label className="text-xs font-semibold text-navy block mb-1.5">{label}</label>
+                  <input type={type} value={form[key as keyof typeof form] as string} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={ph}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+                </div>
+              ))}
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Preferred Contact</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {["Email","Phone","Viber","WhatsApp"].map((m) => (
+                    <button key={m} onClick={() => setForm({ ...form, contact: m })}
+                      className={`py-2 rounded-xl text-xs font-semibold border transition-colors ${form.contact === m ? "bg-navy text-white border-navy" : "bg-white text-slate-600 border-slate-200"}`}>{m}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Government ID</label>
+                <label className="flex flex-col items-center gap-2 w-full border-2 border-dashed border-slate-200 rounded-xl p-5 cursor-pointer hover:border-emerald transition-colors text-center">
+                  <Ic.Upload />
+                  <span className="text-xs text-slate-500">{form.idFile || "Click to upload or drag & drop"}</span>
+                  <span className="text-[10px] text-slate-400">PNG, JPG or PDF — max 5MB</span>
+                  <input type="file" className="hidden" onChange={(e) => setForm({ ...form, idFile: e.target.files?.[0]?.name ?? "" })} />
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 — Mode of Payment */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Mode of Payment</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Select how you will pay <strong className="text-navy">{formatPriceFull(amtDueToday)}</strong> today.</p>
+              </div>
+              <div className="space-y-2.5">
+                {PAYMENT_MODES.map(({ id, label, desc }) => (
+                  <button key={id} onClick={() => setMop(id)}
+                    className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center gap-3 ${mop === id ? "border-navy bg-slate-50" : "border-slate-200 hover:border-slate-300"}`}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${mop === id ? "border-navy" : "border-slate-300"}`}>
+                      {mop === id && <div className="w-2.5 h-2.5 rounded-full bg-navy" />}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-navy text-sm">{label}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {mop && (
+                <div className="bg-blush-50 border border-blush-100 rounded-xl p-3 text-xs text-navy">
+                  <p className="font-semibold mb-1">Payment Instructions</p>
+                  {mop === "gcash" && <p>Send to GCash number <strong>09708769224</strong> (AEY Prime Escapes). Screenshot your receipt and email to <strong>payments@aeyprime.ph</strong>.</p>}
+                  {mop === "bank" && <p>Transfer to <strong>BDO Account #1234-5678-9012</strong>, account name <strong>AEY Prime Escapes Inc.</strong>. Send proof to payments@aeyprime.ph.</p>}
+                  {mop === "card" && <p>You will be redirected to a secure payment gateway after submitting. Visa, Mastercard, and JCB accepted.</p>}
+                  {mop === "cash" && <p>Visit our office at <strong>Unit 5, 8 Rockwell, Makati</strong>, Mon–Sat 9AM–5PM. Bring a valid ID. Official receipt issued upon payment.</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 4 — Receipt */}
+          {step === 4 && (
+            <div className="space-y-4">
+              <div className="text-center pb-2">
+                <div className="w-16 h-16 rounded-full bg-blush-100 flex items-center justify-center mx-auto mb-3">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4A373" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <h2 className="text-xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Reservation Confirmed!</h2>
+                <p className="text-xs text-slate-500 mt-1">You have 30 days to complete the full purchase process.</p>
+              </div>
+
+              {/* Receipt */}
+              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="bg-navy px-4 py-3 flex justify-between items-center">
+                  <p className="text-white text-xs font-bold uppercase tracking-wider">Official Receipt</p>
+                  <p className="text-white/60 text-[10px] font-mono">{reservationId}</p>
+                </div>
+                <div className="p-4 space-y-2.5 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-500">Property</span><span className="font-semibold text-navy text-right max-w-[55%] leading-tight">{property.title}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Buyer</span><span className="font-semibold text-navy">{form.name || "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Contact</span><span className="font-semibold text-navy">{form.phone || form.email || "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Payment Plan</span><span className="font-semibold text-navy">{plan === "downpayment" ? "20% Down Payment" : "Reservation Fee"}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Mode of Payment</span><span className="font-semibold text-navy capitalize">{PAYMENT_MODES.find(p => p.id === mop)?.label ?? "—"}</span></div>
+                  <div className="border-t border-slate-200 pt-2.5 space-y-1.5">
+                    <div className="flex justify-between"><span className="text-slate-500">Total Property Price</span><span className="font-semibold">{formatPriceFull(price)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Amount Paid Today</span><span className="font-bold" style={{ color: "#D4A373" }}>{formatPriceFull(amtDueToday)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Remaining Balance</span><span className="font-semibold">{formatPriceFull(price - amtDueToday)}</span></div>
+                  </div>
+                  {plan === "downpayment" && (
+                    <div className="border-t border-slate-200 pt-2.5 bg-slate-50 -mx-4 px-4 py-3 space-y-1.5">
+                      <p className="text-xs font-bold text-navy mb-2">Monthly Amortization</p>
+                      <div className="flex justify-between text-xs"><span className="text-slate-500">Down Payment ({downPct}%)</span><span className="font-semibold">{formatPriceFull(downPaymentAmt)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-slate-500">Loan Amount ({100 - downPct}%)</span><span className="font-semibold">{formatPriceFull(loanAmt)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-slate-500">Interest Rate</span><span className="font-semibold">6.5% per annum</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-slate-500">Loan Term</span><span className="font-semibold">{loanYears} years ({nMonths} months)</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-slate-500">Total Interest</span><span className="font-semibold">{formatPriceFull(totalInterest)}</span></div>
+                      <div className="flex justify-between font-bold text-sm mt-1 pt-1 border-t border-slate-200"><span className="text-navy">Monthly Payment</span><span style={{ color: "#D4A373" }}>{formatPriceFull(monthly)}</span></div>
+                      <p className="text-[10px] text-slate-400 mt-1">Estimate only. Final rate subject to bank approval.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Agent */}
+              <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3">
+                <img src={property.agent.avatar} alt={property.agent.name} className="w-10 h-10 rounded-full object-cover bg-slate-200" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-navy">{property.agent.name}</p>
+                  <p className="text-xs text-slate-500">{property.agent.agency}</p>
+                </div>
+                <a href={`tel:${property.agent.phone}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-navy text-white text-xs font-semibold">
+                  <Ic.Phone /> Call
+                </a>
+              </div>
+
+              {/* Next steps */}
+              <div className="space-y-2">
+                {["Await confirmation SMS/email within 1 hour", "Prepare two valid government IDs", "Schedule document signing with your agent", "Review Deed of Reservation before 30-day deadline"].map((s, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-slate-600">
+                    <span className="w-4 h-4 rounded-full bg-blush text-navy text-[9px] flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>{s}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => printReceipt({
+                  id: reservationId, property, plan: plan!, mop,
+                  buyerName: form.name, buyerEmail: form.email, buyerPhone: form.phone,
+                  dateCreated: new Date().toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }),
+                  status: "Active",
+                  amtPaid: plan === "downpayment" ? Math.round(property.price * downPct / 100) : 50000,
+                  loanYears, downPct,
+                })}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-200 text-navy text-sm font-semibold hover:bg-slate-50 transition-colors">
+                <Ic.Download /> Download / Print Receipt
+              </button>
+            </div>
+          )}
+        </div>
+
+        {step < 4 ? (
+          <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+            {step > 1 && (
+              <button onClick={() => setStep(s => s - 1)} className="px-4 py-3 rounded-xl border border-slate-200 text-navy text-sm font-semibold hover:bg-slate-50 flex items-center gap-2">
+                <Ic.ArrowLeft /> Back
+              </button>
+            )}
+            <button
+              onClick={() => {
+              if (!canProceed) return;
+              const next = step + 1;
+              setStep(next);
+              if (next === 4 && onReserved && plan) {
+                onReserved({
+                  id: reservationId,
+                  property,
+                  plan,
+                  mop,
+                  buyerName: form.name,
+                  buyerEmail: form.email,
+                  buyerPhone: form.phone,
+                  dateCreated: new Date().toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }),
+                  status: "Active",
+                  amtPaid: plan === "downpayment" ? Math.round(property.price * downPct / 100) : 50000,
+                  loanYears,
+                  downPct,
+                });
+              }
+            }}
+              disabled={!canProceed || (step === 1 && !plan)}
+              className={`flex-1 py-3 rounded-xl text-sm font-bold transition-colors ${(!canProceed || (step === 1 && !plan)) ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-emerald text-navy hover:bg-emerald-600"}`}
+            >
+              {step === 3 ? `Confirm — Pay ${formatPriceFull(amtDueToday)}` : "Continue"}
+            </button>
+          </div>
+        ) : (
+          <div className="px-6 py-4 border-t border-slate-100">
+            <button onClick={onClose} className="w-full py-3 rounded-xl bg-navy text-white text-sm font-bold hover:bg-navy-800">Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Agent Chat Modal ─────────────────────────────────────────────────────────
+type ChatMsg = { from: "user" | "agent"; text: string; time: string };
+function AgentChatModal({ agent, property, onClose }: {
+  agent: Property["agent"]; property: Property; onClose: () => void;
+}) {
+  const now = () => new Date().toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
+  const greet: ChatMsg = {
+    from: "agent",
+    text: `Hi! I'm ${agent.name}. I can answer any questions about ${property.title}. How can I help you today?`,
+    time: now(),
+  };
+  const [messages, setMessages] = useState<ChatMsg[]>([greet]);
+  const [input, setInput] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const QUICK = ["What's the best price?", "Is it ready for occupancy?", "Can I visit the property?", "What are the payment terms?"];
+
+  const sendMsg = (text: string) => {
+    if (!text.trim()) return;
+    const userMsg: ChatMsg = { from: "user", text: text.trim(), time: now() };
+    setMessages((m) => [...m, userMsg]);
+    setInput("");
+    setTimeout(() => {
+      const replies: Record<string, string> = {
+        "what's the best price?": `The listed price for ${property.title} is ${formatPriceFull(property.price)}. There may be room for negotiation — I'd be happy to discuss further. Please call me at ${agent.phone}.`,
+        "is it ready for occupancy?": property.status === "For Sale" ? "Yes! This property is ready for move-in. We can arrange a site visit at your convenience." : `This property is currently ${property.status}. I can give you more details or add you to our waitlist.`,
+        "can i visit the property?": "Absolutely! Just let me know your preferred date and time and I'll set it up. You can also call me directly at " + agent.phone + ".",
+        "what are the payment terms?": `We offer flexible terms: 20% down payment with the balance financed via bank loan or in-house financing. Reservation fee is ₱50,000 to lock in the unit. Call me at ${agent.phone} for a full proposal.`,
+      };
+      const key = text.trim().toLowerCase();
+      const reply = replies[key] ?? `Thanks for your message! I'll get back to you shortly. For urgent inquiries, please call ${agent.phone} directly.`;
+      setMessages((m) => [...m, { from: "agent", text: reply, time: now() }]);
+    }, 900);
+  };
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col" style={{ height: "min(580px, 92vh)" }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-100">
+          <div className="relative">
+            <img src={agent.avatar} alt={agent.name} className="w-10 h-10 rounded-full object-cover bg-slate-200" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-navy text-sm">{agent.name}</p>
+            <p className="text-[10px] text-slate-500 truncate">{agent.agency} · {property.title}</p>
+          </div>
+          <a href={`tel:${agent.phone}`} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-navy hover:bg-slate-200 transition-colors"><Ic.Phone /></a>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"><Ic.X /></button>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"} gap-2`}>
+              {msg.from === "agent" && (
+                <img src={agent.avatar} alt="" className="w-7 h-7 rounded-full object-cover bg-slate-200 flex-shrink-0 mt-1" />
+              )}
+              <div className={`max-w-[78%] ${msg.from === "user" ? "items-end" : "items-start"} flex flex-col`}>
+                <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${msg.from === "user" ? "bg-navy text-white rounded-br-sm" : "bg-slate-100 text-navy rounded-bl-sm"}`}>
+                  {msg.text}
+                </div>
+                <span className="text-[10px] text-slate-400 mt-0.5 px-1">{msg.time}</span>
+              </div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Quick replies */}
+        {messages.length <= 2 && (
+          <div className="px-4 pb-2 flex gap-2 overflow-x-auto">
+            {QUICK.map((q) => (
+              <button key={q} onClick={() => sendMsg(q)}
+                className="flex-shrink-0 text-[11px] font-semibold px-3 py-1.5 rounded-full border border-slate-200 bg-white text-navy hover:border-navy hover:bg-slate-50 transition-colors">
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Input */}
+        <div className="px-4 py-3 border-t border-slate-100 flex gap-2 items-end">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMsg(input)}
+            placeholder="Type a message…"
+            className="flex-1 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition"
+          />
+          <button
+            onClick={() => sendMsg(input)}
+            disabled={!input.trim()}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${input.trim() ? "bg-navy text-white hover:bg-navy-800" : "bg-slate-200 text-slate-400"}`}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inquire Modal ────────────────────────────────────────────────────────────
+function InquireModal({ property, onClose }: { property: Property; onClose: () => void }) {
+  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => { setLoading(false); setSent(true); }, 1200);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <h3 className="text-lg font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Inquire About This Property</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"><Ic.X /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {sent ? (
+            <div className="text-center py-6 space-y-4">
+              <div className="w-16 h-16 rounded-full bg-blush-100 flex items-center justify-center mx-auto">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4A373" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <h3 className="text-xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Inquiry Sent!</h3>
+              <p className="text-sm text-slate-500">Your message has been forwarded to {property.agent.name}. Expect a reply within 24 hours.</p>
+              <div className="bg-slate-50 rounded-2xl p-4 text-left">
+                <p className="text-xs font-semibold text-navy mb-2">Your Agent</p>
+                <div className="flex items-center gap-3">
+                  <img src={property.agent.avatar} alt={property.agent.name} className="w-10 h-10 rounded-full object-cover bg-slate-200" />
+                  <div>
+                    <p className="text-sm font-semibold text-navy">{property.agent.name}</p>
+                    <p className="text-xs text-slate-500">{property.agent.agency}</p>
+                    <a href={`tel:${property.agent.phone}`} className="text-xs flex items-center gap-1 mt-0.5 font-semibold" style={{ color: "#D4A373" }}>
+                      <Ic.Phone /> {property.agent.phone}
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400">Or reach us directly at <strong className="text-navy">09708769224</strong></p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Property mini-card */}
+              <div className="flex gap-3 bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <img src={property.images[0]} alt={property.title} className="w-16 h-16 rounded-xl object-cover bg-slate-200 flex-shrink-0" />
+                <div className="min-w-0">
+Senior Property Consultant
+                  <p className="text-sm font-bold text-navy truncate">{property.title}</p>
+                  <p className="text-xs text-slate-500 truncate">{property.city}</p>
+                  <p className="text-sm font-bold mt-1" style={{ color: "#D4A373" }}>{formatPrice(property.price)}</p>
+                </div>
+              </div>
+              {/* Agent strip */}
+              <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <img src={property.agent.avatar} alt={property.agent.name} className="w-9 h-9 rounded-full object-cover bg-slate-200 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-navy">{property.agent.name}</p>
+                  <a href={`tel:${property.agent.phone}`} className="text-xs flex items-center gap-1 font-semibold" style={{ color: "#D4A373" }}>
+                    <Ic.Phone /> {property.agent.phone}
+                  </a>
+                </div>
+                <a href={`tel:${property.agent.phone}`}
+                  className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-navy text-white text-xs font-semibold hover:bg-navy-800 transition-colors">
+                  <Ic.Phone /> Call Now
+                </a>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-3">
+                {[["name","Full Name","text","Juan dela Cruz"],["email","Email Address","email","juan@email.com"],["phone","Phone Number","tel","09XX XXX XXXX"]].map(([k,l,t,ph]) => (
+                  <div key={k}>
+                    <label className="text-xs font-semibold text-navy block mb-1.5">{l}</label>
+                    <input type={t} required value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} placeholder={ph}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+                  </div>
+                ))}
+                <div>
+                  <label className="text-xs font-semibold text-navy block mb-1.5">Your Message</label>
+                  <textarea rows={4} required value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    placeholder={`Hi, I'm interested in ${property.title}. Could you share more details about...`}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald resize-none" />
+                </div>
+                <button type="submit" disabled={loading}
+                  className={`w-full py-3.5 rounded-xl text-sm font-bold transition-colors ${loading ? "bg-emerald/60 cursor-not-allowed text-navy" : "bg-emerald text-navy hover:bg-emerald-600"}`}>
+                  {loading ? "Sending…" : "Send Inquiry"}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+        {sent && (
+          <div className="px-6 py-4 border-t border-slate-100">
+            <button onClick={onClose} className="w-full py-3 rounded-xl bg-navy text-white text-sm font-bold hover:bg-navy-800">Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Schedule Modal (with Calendar) ──────────────────────────────────────────
+function ScheduleModal({ property, onClose }: { property: Property; onClose: () => void }) {
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [form, setForm] = useState({ name: "", phone: "" });
+  const [confirmed, setConfirmed] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const TIME_SLOTS = ["9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"];
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+  const isToday = (d: number) => d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+  const isPast = (d: number) => new Date(viewYear, viewMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const isSelected = (d: number) => selectedDate?.getDate() === d && selectedDate?.getMonth() === viewMonth && selectedDate?.getFullYear() === viewYear;
+
+  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(v => v - 1); } else setViewMonth(m => m - 1); };
+  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(v => v + 1); } else setViewMonth(m => m + 1); };
+
+  const canGoBack = viewYear > today.getFullYear() || viewMonth > today.getMonth();
+
+  const handleConfirm = () => {
+    if (!selectedDate || !selectedTime || !form.name || !form.phone) return;
+    setLoading(true);
+    setTimeout(() => { setLoading(false); setConfirmed(true); }, 1200);
+  };
+
+  const formattedDate = selectedDate
+    ? selectedDate.toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+    : "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[95vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <h3 className="text-lg font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Schedule a Viewing</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"><Ic.X /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {confirmed ? (
+            <div className="text-center py-4 space-y-4">
+              <div className="w-16 h-16 rounded-full bg-blush-100 flex items-center justify-center mx-auto">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4A373" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <h3 className="text-xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Viewing Scheduled!</h3>
+              <p className="text-sm text-slate-500">Your site visit has been confirmed. {property.agent.name} will reach out to finalize details.</p>
+              <div className="bg-slate-50 rounded-2xl p-4 text-left space-y-3">
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Property</span><span className="font-semibold text-navy text-right max-w-[55%]">{property.title}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Date</span><span className="font-semibold text-navy">{formattedDate}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Time</span><span className="font-semibold text-navy">{selectedTime}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Agent</span><span className="font-semibold text-navy">{property.agent.name}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Contact</span>
+                  <a href={`tel:${property.agent.phone}`} className="font-semibold" style={{ color: "#D4A373" }}>09708769224</a>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* Property context */}
+              <div className="flex gap-3 bg-slate-50 rounded-2xl p-3 border border-slate-100">
+                <img src={property.images[0]} alt={property.title} className="w-14 h-14 rounded-xl object-cover bg-slate-200 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-navy truncate">{property.title}</p>
+                  <p className="text-xs text-slate-500 truncate">{property.city}</p>
+                  <p className="text-xs font-semibold mt-0.5" style={{ color: "#D4A373" }}>Agent: {property.agent.name}</p>
+                </div>
+              </div>
+
+              {/* Calendar */}
+              <div>
+                <p className="text-xs font-semibold text-navy mb-2">Select a Date</p>
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                  {/* Month nav */}
+                  <div className="flex items-center justify-between mb-3">
+                    <button onClick={prevMonth} disabled={!canGoBack}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${canGoBack ? "hover:bg-slate-200 text-navy" : "text-slate-300 cursor-not-allowed"}`}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    </button>
+                    <p className="text-sm font-bold text-navy">{MONTHS[viewMonth]} {viewYear}</p>
+                    <button onClick={nextMonth} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200 text-navy transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                  </div>
+                  {/* Day headers */}
+                  <div className="grid grid-cols-7 mb-1">
+                    {DAYS.map((d) => <p key={d} className="text-center text-[10px] font-bold text-slate-400 py-1">{d}</p>)}
+                  </div>
+                  {/* Day grid */}
+                  <div className="grid grid-cols-7 gap-0.5">
+                    {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                      const day = i + 1;
+                      const past = isPast(day);
+                      const sel = isSelected(day);
+                      const tod = isToday(day);
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => !past && setSelectedDate(new Date(viewYear, viewMonth, day))}
+                          disabled={past}
+                          className={`aspect-square rounded-xl text-xs font-semibold transition-all flex items-center justify-center
+                            ${sel ? "bg-navy text-white" : past ? "text-slate-300 cursor-not-allowed" : tod ? "border-2 border-emerald text-navy hover:bg-slate-200" : "text-navy hover:bg-slate-200"}`}
+                        >{day}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Time slots */}
+              {selectedDate && (
+                <div>
+                  <p className="text-xs font-semibold text-navy mb-2">Select a Time Slot</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {TIME_SLOTS.map((t) => (
+                      <button key={t} onClick={() => setSelectedTime(t)}
+                        className={`py-2 rounded-xl text-xs font-semibold border transition-colors ${selectedTime === t ? "bg-navy text-white border-navy" : "bg-white border-slate-200 text-navy hover:border-navy"}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact info */}
+              {selectedDate && selectedTime && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-navy">Your Contact Details</p>
+                  {[["name","Full Name","text","Juan dela Cruz"],["phone","Phone Number","tel","09XX XXX XXXX"]].map(([k,l,t,ph]) => (
+                    <div key={k}>
+                      <label className="text-xs text-slate-500 block mb-1">{l}</label>
+                      <input type={t} required value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} placeholder={ph}
+                        className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="px-6 py-4 border-t border-slate-100">
+          {confirmed ? (
+            <button onClick={onClose} className="w-full py-3 rounded-xl bg-navy text-white text-sm font-bold hover:bg-navy-800">Done</button>
+          ) : (
+            <button
+              onClick={handleConfirm}
+              disabled={!selectedDate || !selectedTime || !form.name || !form.phone || loading}
+              className={`w-full py-3.5 rounded-xl text-sm font-bold transition-colors ${!selectedDate || !selectedTime || !form.name || !form.phone ? "bg-slate-200 text-slate-400 cursor-not-allowed" : loading ? "bg-emerald/60 text-navy cursor-not-allowed" : "bg-emerald text-navy hover:bg-emerald-600"}`}>
+              {loading ? "Confirming…" : selectedDate && selectedTime ? `Confirm — ${formattedDate} at ${selectedTime}` : "Select a date and time to continue"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Looking for a Property Modal ─────────────────────────────────────────────
+function LookingModal({ onClose }: { onClose: () => void }) {
+  const [form, setForm] = useState({ name: "", phone: "", email: "", type: "", budget: "", location: "", notes: "" });
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSent(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <div>
+            <h3 className="text-lg font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Looking for a Property?</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Tell us what you need — we'll find it for you.</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"><Ic.X /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {sent ? (
+            <div className="text-center py-6 space-y-4">
+              <div className="w-16 h-16 rounded-full bg-blush-100 flex items-center justify-center mx-auto">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4A373" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+              <h3 className="text-xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>We're on it!</h3>
+              <p className="text-sm text-slate-500">Our team will reach out within 24 hours with matching properties tailored to your needs.</p>
+              <div className="bg-slate-50 rounded-2xl p-4 text-sm text-navy font-semibold">
+                <Ic.Phone /> <span className="ml-1">09708769224</span>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="bg-blush-50 border border-blush-100 rounded-xl p-3 text-xs text-navy-700">
+                You can also call us directly: <a href="tel:09708769224" className="font-bold text-navy">09708769224</a>
+              </div>
+              {[["name","Full Name","text","Juan dela Cruz"],["phone","Phone Number","tel","09XX XXX XXXX"],["email","Email Address","email","juan@email.com"]].map(([k,l,t,ph]) => (
+                <div key={k}>
+                  <label className="text-xs font-semibold text-navy block mb-1.5">{l}</label>
+                  <input type={t} required value={(form as any)[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} placeholder={ph}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+                </div>
+              ))}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-navy block mb-1.5">Property Type</label>
+                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald bg-white">
+                    <option value="">Any</option>
+                    {["House","Condo","House & Lot","Lot","Commercial"].map((t) => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-navy block mb-1.5">Max Budget</label>
+                  <select value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald bg-white">
+                    <option value="">Flexible</option>
+                    {["Under ₱3M","₱3M – ₱6M","₱6M – ₱12M","₱12M – ₱25M","₱25M+"].map((b) => <option key={b}>{b}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Preferred Location</label>
+                <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Makati, Laguna, BGC"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Additional Notes <span className="text-slate-400 font-normal">(optional)</span></label>
+                <textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Number of bedrooms, move-in date, special requirements..."
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald resize-none" />
+              </div>
+              <button type="submit" className="w-full py-3.5 rounded-xl bg-emerald text-navy text-sm font-bold hover:bg-emerald-600 transition-colors">
+                Submit Request
+              </button>
+            </form>
+          )}
+        </div>
+        {sent && (
+          <div className="px-6 py-4 border-t border-slate-100">
+            <button onClick={onClose} className="w-full py-3 rounded-xl bg-navy text-white text-sm font-bold hover:bg-navy-800">Close</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Shared Navbar ────────────────────────────────────────────────────────────
+function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => { setLoading(false); onSuccess(); }, 1200);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <div>
+            <h3 className="text-lg font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>
+              {mode === "login" ? "Welcome back" : "Create an account"}
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">AEY Prime Escapes</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"><Ic.X /></button>
+        </div>
+        <div className="px-6 py-5">
+          {/* Social buttons */}
+          <div className="space-y-2 mb-4">
+            {[["G", "Continue with Google", "#4285F4"],["F", "Continue with Facebook", "#1877F2"]].map(([icon, label, color]) => (
+              <button key={label} onClick={() => { setTimeout(onSuccess, 800); }}
+                className="w-full flex items-center justify-center gap-2 border border-slate-200 rounded-xl py-2.5 text-sm font-semibold text-navy hover:bg-slate-50 transition-colors">
+                <span className="font-bold text-base" style={{ color: color as string }}>{icon}</span> {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs text-slate-400">or</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Full Name</label>
+                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Juan dela Cruz"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-semibold text-navy block mb-1.5">Email Address</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="juan@email.com"
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-navy block mb-1.5">Password</label>
+              <div className="relative">
+                <input type={showPw ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-navy">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    {showPw ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></> : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <button type="submit" disabled={loading}
+              className={`w-full py-3.5 rounded-xl text-sm font-bold transition-colors ${loading ? "bg-emerald/60 text-navy cursor-not-allowed" : "bg-emerald text-navy hover:bg-emerald-600"}`}>
+              {loading ? (mode === "login" ? "Signing in…" : "Creating account…") : (mode === "login" ? "Sign In" : "Create Account")}
+            </button>
+          </form>
+          <p className="text-center text-xs text-slate-500 mt-4">
+            {mode === "login" ? "Don't have an account? " : "Already have an account? "}
+            <button onClick={() => setMode(mode === "login" ? "signup" : "login")}
+              className="font-semibold hover:underline" style={{ color: "#D4A373" }}>
+              {mode === "login" ? "Sign up" : "Log in"}
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Navbar({ page, setPage, isAuthenticated, onLoginSuccess }: {
+  page: Page; setPage: (p: Page) => void; isAuthenticated: boolean; onLoginSuccess: () => void;
+}) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [showLooking, setShowLooking] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const navLinks: { label: string; page: Page }[] = [
+    { label: "Buy", page: "buy" },
+    { label: "New Developments", page: "new-developments" },
+    { label: "Agents", page: "agents" },
+    { label: "About", page: "about" },
+  ];
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+          <button onClick={() => setPage("buy")}><Logo /></button>
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map(({ label, page: p }) => (
+              <button key={p} onClick={() => setPage(p)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${page === p ? "bg-slate-100 text-navy font-semibold" : "text-slate-500 hover:text-navy hover:bg-slate-50"}`}>
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="flex items-center gap-2">
+            {isAuthenticated ? (
+              <button onClick={() => setPage("my-reservations")}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors ${page === "my-reservations" ? "bg-slate-100" : "hover:bg-slate-50"}`}>
+                <div className="w-8 h-8 rounded-full bg-emerald flex items-center justify-center text-navy text-xs font-bold">J</div>
+                <div className="hidden sm:block text-left">
+                  <p className="text-xs font-bold text-navy leading-none">Juan</p>
+                  <p className="text-[10px] text-slate-500 leading-none mt-0.5">My Reservations</p>
+                </div>
+              </button>
+            ) : (
+              <>
+                <button onClick={() => setShowLogin(true)} className="hidden sm:block text-sm font-semibold text-navy hover:text-emerald transition-colors px-3 py-2">Log in</button>
+                <button onClick={() => setShowLooking(true)} className="bg-navy text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-navy-800 transition-colors whitespace-nowrap">
+                  Looking for a Property?
+                </button>
+              </>
+            )}
+            <button className="md:hidden p-2 text-slate-500" onClick={() => setMobileOpen(!mobileOpen)}><Ic.Menu /></button>
+          </div>
+        </div>
+        {mobileOpen && (
+          <div className="md:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-1">
+            {navLinks.map(({ label, page: p }) => (
+              <button key={p} onClick={() => { setPage(p); setMobileOpen(false); }}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${page === p ? "bg-slate-100 text-navy font-semibold" : "text-slate-600 hover:bg-slate-50"}`}>
+                {label}
+              </button>
+            ))}
+            {!isAuthenticated && (
+              <button onClick={() => { setShowLogin(true); setMobileOpen(false); }}
+                className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-navy hover:bg-slate-50">
+                Log in
+              </button>
+            )}
+          </div>
+        )}
+      </header>
+      {showLooking && <LookingModal onClose={() => setShowLooking(false)} />}
+      {showLogin && <NavLoginModal onClose={() => setShowLogin(false)} onSuccess={() => { setShowLogin(false); onLoginSuccess(); }} />}
+    </>
+  );
+}
+
+// ─── Property Detail Page ─────────────────────────────────────────────────────
+function PropertyDetailPage({ property, isAuthenticated, onAuthRequired, onBack, onReserved }: {
+  property: Property;
+  isAuthenticated: boolean;
+  onAuthRequired: (action: string) => void;
+  onBack: () => void;
+  onReserved?: (rec: ReservationRecord) => void;
+}) {
+  const [activeImg, setActiveImg] = useState(0);
+  const [showReservation, setShowReservation] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+
+  const amenityIcons: Record<string, React.ReactElement> = {
+    "Garage (3-car)": <Ic.Car />, "Garage (1-car)": <Ic.Car />, "Garage (2-car)": <Ic.Car />,
+    "Swimming Pool": <Ic.Pool />, "Infinity Pool": <Ic.Pool />,
+    "24/7 Security": <Ic.Shield />, "Garden": <Ic.Tree />, "Backup Generator": <Ic.Zap />,
+    "Gym": <Ic.Building />, "Concierge": <Ic.Building />, "Parking": <Ic.Car />,
+    "Parking (2 slots)": <Ic.Car />, "Sky Lounge": <Ic.Building />, "Clean Title": <Ic.FileText />,
+    "Clubhouse Access": <Ic.Building />, "Road Frontage": <Ic.Pin />, "Gated Community": <Ic.Shield />,
+    "Ridge View": <Ic.Tree />, "Bay View": <Ic.Tree />, "Playground": <Ic.Tree />,
+    "PEZA Accredited": <Ic.FileText />, "Fiber Internet Ready": <Ic.Wifi />, "Central A/C": <Ic.Zap />,
+    "Backup Power": <Ic.Zap />, "Rooftop Lounge": <Ic.Building />, "EV Charging": <Ic.Zap />,
+    "Smart Home": <Ic.Zap />, "Retail Podium": <Ic.Building />, "Shuttle Service": <Ic.Car />,
+  };
+
+  const monthly = monthlyMortgage(property.price);
+  const isUnavailable = property.status === "Reserved" || property.status === "Sold";
+
+  const handleRestricted = (action: string) => {
+    if (!isAuthenticated) { onAuthRequired(action); return; }
+    if (action === "Reserve This Property") setShowReservation(true);
+
+  };
+
+  return (
+    <div className="min-h-screen bg-offwhite">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <button onClick={onBack} className="flex items-center gap-2 text-navy font-semibold text-sm hover:text-emerald transition-colors mb-6">
+          <Ic.ArrowLeft /> Back to Listings
+        </button>
+
+        {/* Gallery — 3 photos: main (left) + interior + bathroom (right column) */}
+        <div className="grid grid-cols-3 gap-2 h-[380px] rounded-2xl overflow-hidden mb-8 relative">
+          <div className="col-span-2 bg-slate-200 cursor-pointer" onClick={() => { setActiveImg(0); setShowAllPhotos(true); }}>
+            <img src={property.images[0]} alt="Exterior" className="w-full h-full object-cover hover:brightness-95 transition" />
+            <span className="absolute bottom-3 left-3 text-[10px] font-bold uppercase tracking-wider bg-navy/70 text-white px-2 py-1 rounded-lg">Exterior</span>
+          </div>
+          <div className="grid grid-rows-2 gap-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="relative bg-slate-200 cursor-pointer" onClick={() => { setActiveImg(i); setShowAllPhotos(true); }}>
+                <img src={property.images[i]} alt={i === 1 ? "Interior" : "Bathroom"} className="w-full h-full object-cover hover:brightness-95 transition" />
+                <span className="absolute bottom-2 left-2 text-[10px] font-bold uppercase tracking-wider bg-navy/70 text-white px-2 py-0.5 rounded-lg">
+                  {i === 1 ? "Interior" : "Bathroom"}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setShowAllPhotos(true)}
+            className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/90 backdrop-blur text-navy text-xs font-semibold px-3 py-2 rounded-xl shadow hover:bg-white transition">
+            <Ic.Photos /> View All 3 Photos
+          </button>
+        </div>
+
+        {/* Lightbox */}
+        {showAllPhotos && (
+          <div className="fixed inset-0 z-50 bg-navy/95 flex flex-col">
+            <div className="flex items-center justify-between p-4">
+              <p className="text-white/60 text-sm">{activeImg + 1} / {property.images.length}</p>
+              <button onClick={() => setShowAllPhotos(false)} className="text-white/60 hover:text-white"><Ic.X /></button>
+            </div>
+            <div className="flex-1 flex items-center justify-center px-4">
+              <img src={property.images[activeImg]} alt="" className="max-h-full max-w-full object-contain rounded-xl" />
+            </div>
+            <div className="flex gap-2 p-4 justify-center">
+              {property.images.map((img, i) => (
+                <button key={i} onClick={() => setActiveImg(i)} className={`w-14 h-10 rounded-lg overflow-hidden flex-shrink-0 border-2 transition ${activeImg === i ? "border-emerald" : "border-transparent"}`}>
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+          <div className="space-y-8">
+            <div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{property.title}</h1>
+                  <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-1"><Ic.Pin />{property.address}, {property.city}</div>
+                </div>
+                <StatusBadge status={property.status} />
+              </div>
+              <div className="mt-4">
+                <p className="text-3xl font-bold text-navy">{formatPriceFull(property.price)}</p>
+                <p className="text-sm text-slate-500 mt-0.5">Est. <strong className="text-emerald">₱{Math.round(monthly).toLocaleString("en-PH")}/mo</strong> · 20% down · 20yr · 6.5% p.a.</p>
+              </div>
+              <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-slate-100">
+                {[
+                  { label: "Type", value: property.type },
+                  { label: "Lot Area", value: `${property.lotArea} m²` },
+                  property.floorArea ? { label: "Floor Area", value: `${property.floorArea} m²` } : null,
+                  property.beds !== null ? { label: "Bedrooms", value: String(property.beds) } : null,
+                  property.baths !== null ? { label: "Bathrooms", value: String(property.baths) } : null,
+                ].filter(Boolean).map((item) => (
+                  <div key={item!.label} className="text-center bg-slate-50 rounded-xl px-5 py-3">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">{item!.label}</p>
+                    <p className="text-base font-bold text-navy mt-0.5">{item!.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-navy mb-3" style={{ fontFamily: "var(--font-display)" }}>About This Property</h2>
+              <p className="text-slate-600 text-sm leading-relaxed">{property.description}</p>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-navy mb-4" style={{ fontFamily: "var(--font-display)" }}>Amenities & Features</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {property.amenities.map((a) => (
+                  <div key={a} className="flex items-center gap-2.5 bg-white border border-slate-100 rounded-xl px-3 py-3">
+                    <span className="text-emerald">{amenityIcons[a] ?? <Ic.Check />}</span>
+                    <span className="text-sm text-navy font-medium">{a}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-navy mb-3" style={{ fontFamily: "var(--font-display)" }}>Location</h2>
+              <div className="relative bg-slate-100 rounded-2xl h-52 overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&h=400&fit=crop&auto=format" alt="Map" className="w-full h-full object-cover opacity-60" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-white/90 backdrop-blur rounded-xl px-5 py-3 text-center shadow">
+                    <p className="text-sm font-semibold text-navy">{property.city}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Nearby: Schools · Hospitals · Transit</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="hidden lg:block">
+            <div className="sticky top-24 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+                  <img src={property.agent.avatar} alt={property.agent.name} className="w-12 h-12 rounded-full object-cover bg-slate-200 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-navy text-sm">{property.agent.name}</p>
+                    <p className="text-xs text-slate-500">{property.agent.agency}</p>
+                    <p className="text-xs text-emerald flex items-center gap-1 mt-0.5"><Ic.Phone />{property.agent.phone}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => !isUnavailable && handleRestricted("Reserve This Property")}
+                    disabled={isUnavailable}
+                    className={`w-full py-3 rounded-xl text-sm font-bold transition-colors ${isUnavailable ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-emerald text-navy hover:bg-emerald-600"}`}>
+                    {isUnavailable ? (property.status === "Reserved" ? "Currently Reserved" : "Sold") : "Reserve This Property"}
+                  </button>
+                  <button
+                    onClick={() => setShowChat(true)}
+                    className="w-full py-3 rounded-xl border-2 border-slate-200 text-navy text-sm font-semibold hover:border-navy hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Chat with Agent
+                  </button>
+                </div>
+              </div>
+              <div className="bg-blush-50 border border-blush-100 rounded-2xl p-4 text-xs text-navy-700">
+                <p className="font-semibold mb-1">Secure Reservation</p>
+                <p>Fully refundable within 7 days if you change your mind.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile sticky footer */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex gap-2 shadow-xl">
+        <button onClick={() => setShowChat(true)}
+          className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-slate-200 text-navy flex items-center justify-center hover:bg-slate-50 transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <button onClick={() => !isUnavailable && handleRestricted("Reserve This Property")} disabled={isUnavailable}
+          className={`flex-1 py-3 rounded-xl text-sm font-bold ${isUnavailable ? "bg-slate-200 text-slate-400" : "bg-emerald text-navy"}`}>
+          {isUnavailable ? (property.status === "Reserved" ? "Currently Reserved" : "Sold") : "Reserve This Property"}
+        </button>
+      </div>
+
+      {showReservation && <ReservationModal property={property} onClose={() => setShowReservation(false)} onReserved={onReserved} />}
+      {showChat && <AgentChatModal agent={property.agent} property={property} onClose={() => setShowChat(false)} />}
+    </div>
+  );
+}
+
+// ─── Buy Page ─────────────────────────────────────────────────────────────────
+function BuyPage({ onSelectProperty }: { onSelectProperty: (p: Property) => void }) {
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchLocation, setSearchLocation] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(defaultFilters);
+
+  const categories = ["All", "House", "Condo", "House & Lot", "Lot", "Commercial"];
+  const categoryImages: Record<string, string> = {
+    House:        "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=280&fit=crop&auto=format",
+    Condo:        "https://images.unsplash.com/photo-1722421492323-eaf9c401befe?w=400&h=280&fit=crop&auto=format",
+    "House & Lot":"https://images.unsplash.com/photo-1670589953882-b94c9cb380f5?w=400&h=280&fit=crop&auto=format",
+    Lot:          "https://images.unsplash.com/photo-1628012209120-d9db7abf7eab?w=400&h=280&fit=crop&auto=format",
+    Commercial:   "https://images.unsplash.com/photo-1679364297777-1db77b6199be?w=400&h=280&fit=crop&auto=format",
+  };
+
+  const filtered = PROPERTIES.filter((p) => {
+    if (activeCategory !== "All" && p.type !== activeCategory) return false;
+    if (p.price < filters.minPrice || p.price > filters.maxPrice) return false;
+    if (p.lotArea < filters.minArea || p.lotArea > filters.maxArea) return false;
+    if (filters.beds !== "Any" && p.beds !== null) {
+      if (filters.beds === "5+" ? p.beds < 5 : p.beds !== Number(filters.beds)) return false;
+    }
+    if (searchLocation && !p.city.toLowerCase().includes(searchLocation.toLowerCase()) && !p.address.toLowerCase().includes(searchLocation.toLowerCase())) return false;
+    return true;
+  });
+
+  const activeFiltersCount = [filters.minPrice > 0 || filters.maxPrice < 100_000_000, filters.minArea > 0 || filters.maxArea < 2000, filters.beds !== "Any", filters.baths !== "Any"].filter(Boolean).length;
+
+  return (
+    <>
+      {/* Hero */}
+      <section className="relative bg-navy overflow-hidden">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1748063578185-3d68121b11ff?w=1600&h=700&fit=crop&auto=format" alt="Hero" className="w-full h-full object-cover opacity-25" />
+          <div className="absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/80 to-navy" />
+        </div>
+        <div className="relative max-w-4xl mx-auto px-4 pt-16 pb-12 text-center">
+          <p className="text-emerald text-sm font-semibold uppercase tracking-widest mb-3">1,284 Properties Available</p>
+          <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-3" style={{ fontFamily: "var(--font-display)" }}>
+            Find Your Next<br /><em>Dream Property</em>
+          </h1>
+          <p className="text-white/60 text-base mb-8">Search across Metro Manila, Cavite, Laguna, and beyond.</p>
+          <div className="bg-white rounded-2xl shadow-2xl p-3">
+            <div className="flex gap-1 mb-3 overflow-x-auto pb-1">
+              {categories.map((cat) => (
+                <button key={cat} onClick={() => setActiveCategory(cat)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeCategory === cat ? "bg-navy text-white" : "text-slate-500 hover:bg-slate-50 hover:text-navy"}`}>
+                  {cat} <span className={`ml-1 text-xs ${activeCategory === cat ? "text-white/60" : "text-slate-400"}`}>{CATEGORY_COUNTS[cat]}</span>
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Ic.Pin /></span>
+                <input type="text" value={searchLocation} onChange={(e) => setSearchLocation(e.target.value)}
+                  placeholder="City, subdivision, or address"
+                  className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald" />
+              </div>
+              <button onClick={() => setFilterOpen(true)} className="relative flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:border-navy transition-colors">
+                <Ic.Filter /> Filters
+                {activeFiltersCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald text-navy text-[9px] font-bold flex items-center justify-center">{activeFiltersCount}</span>}
+              </button>
+              <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald text-navy text-sm font-bold hover:bg-emerald-600">
+                <Ic.Search /> Search
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Browse by Type */}
+      <section className="max-w-7xl mx-auto px-4 pt-14 pb-4">
+        <div className="flex items-baseline justify-between mb-6">
+          <h2 className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Browse by Type</h2>
+          <span className="text-sm font-semibold flex items-center gap-1" style={{ color: "#D4A373" }}>All categories <Ic.ChevronRight /></span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {Object.entries(categoryImages).map(([cat, img]) => (
+            <button key={cat} onClick={() => setActiveCategory(cat)}
+              className={`group relative rounded-2xl overflow-hidden aspect-[4/3] border-2 transition-all ${activeCategory === cat ? "border-emerald" : "border-transparent"}`}>
+              <img src={img} alt={cat} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-navy/80 via-navy/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-3 text-left">
+                <p className="text-white font-bold text-sm">{cat}</p>
+                <p className="text-white/70 text-xs">{CATEGORY_COUNTS[cat]} listings</p>
+              </div>
+              {activeCategory === cat && <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald flex items-center justify-center"><Ic.Check /></div>}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Listings */}
+      <section className="max-w-7xl mx-auto px-4 pt-10 pb-20">
+        <div className="flex items-baseline justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>
+              {activeCategory === "All" ? "Featured Listings" : `${activeCategory} Properties`}
+            </h2>
+            <p className="text-sm text-slate-500 mt-0.5">{filtered.length} properties found</p>
+          </div>
+          <select className="text-sm border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald bg-white">
+            <option>Newest First</option><option>Price: Low to High</option><option>Price: High to Low</option>
+          </select>
+        </div>
+        {filtered.length === 0 ? (
+          <div className="text-center py-20 text-slate-400">
+            <Ic.Building />
+            <p className="font-semibold text-lg text-slate-600">No properties match your filters</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filtered.map((p) => <PropertyCard key={p.id} property={p} onClick={() => onSelectProperty(p)} />)}
+          </div>
+        )}
+      </section>
+
+      <FilterDrawer open={filterOpen} onClose={() => setFilterOpen(false)} filters={filters} setFilters={setFilters} />
+    </>
+  );
+}
+
+// ─── New Developments Page ────────────────────────────────────────────────────
+function NewDevelopmentsPage({ onSelectProperty }: { onSelectProperty: (p: Property) => void }) {
+  const devs = PROPERTIES.filter((p) => p.isNewDevelopment);
+  const phases = [
+    { label: "Launching Soon", tag: "Q4 2026", color: "bg-blue-50 text-blue-700 border-blue-200" },
+    { label: "Under Construction", tag: "Q2 2027", color: "bg-amber-50 text-amber-700 border-amber-200" },
+    { label: "Ready for Occupancy", tag: "2025", color: "bg-blush-50 text-navy-700 border-blush-100" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-offwhite">
+      {/* Hero */}
+      <section className="relative bg-navy overflow-hidden">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1679364297777-1db77b6199be?w=1600&h=600&fit=crop&auto=format" alt="New developments" className="w-full h-full object-cover opacity-20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/90 to-navy/60" />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-4 py-20">
+          <span className="inline-block bg-emerald/20 text-emerald text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-emerald/30 mb-4">New Developments</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+            Pre-Selling &<br /><em>New Projects</em>
+          </h1>
+          <p className="text-white/60 max-w-xl text-base">Lock in at pre-selling prices before public launch. Exclusive early-bird payment terms available on select projects.</p>
+        </div>
+      </section>
+
+      {/* Stats strip */}
+      <div className="bg-white border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-3 divide-x divide-slate-100">
+          {[["3", "Active Projects"], ["₱5.4M", "Starting Price"], ["2026–2028", "Completion Range"]].map(([val, label]) => (
+            <div key={label} className="text-center px-6">
+              <p className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{val}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Phase legend */}
+      <div className="max-w-7xl mx-auto px-4 pt-10">
+        <div className="flex flex-wrap gap-2 mb-8">
+          {phases.map(({ label, color }) => (
+            <span key={label} className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${color}`}>{label}</span>
+          ))}
+        </div>
+
+        <h2 className="text-2xl font-bold text-navy mb-6" style={{ fontFamily: "var(--font-display)" }}>Available New Projects</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-16">
+          {devs.map((p) => (
+            <div key={p.id} onClick={() => onSelectProperty(p)} className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+              <div className="relative bg-slate-200 aspect-video">
+                <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-t from-navy/60 to-transparent" />
+                <div className="absolute bottom-3 left-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blush text-navy">Pre-Selling · {p.completionDate}</span>
+                </div>
+              </div>
+              <div className="p-5">
+                <h3 className="font-bold text-navy text-base leading-snug">{p.title}</h3>
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Ic.Pin />{p.city}</p>
+                <p className="text-xl font-bold text-navy mt-3">{formatPrice(p.price)}</p>
+                <p className="text-xs text-slate-500 mt-0.5">Starting price · {p.type}</p>
+                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100 text-slate-500 text-xs">
+                  {p.beds && <span className="flex items-center gap-1"><Ic.Bed />{p.beds} Beds</span>}
+                  {p.baths && <span className="flex items-center gap-1"><Ic.Bath />{p.baths} Baths</span>}
+                  <span className="flex items-center gap-1"><Ic.Area />{p.lotArea} m²</span>
+                </div>
+                <div className="mt-3">
+                  <p className="text-xs text-slate-400 mb-1">Completion</p>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald rounded-full" style={{ width: p.completionDate === "Q4 2026" ? "65%" : p.completionDate === "Q2 2027" ? "35%" : "20%" }} />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Est. {p.completionDate}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA Banner */}
+        <div className="bg-navy rounded-3xl p-8 md:p-12 text-center mb-16">
+          <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-display)" }}>Be the First to Know</h2>
+          <p className="text-white/60 text-sm mb-6">Get early access to new project launches before they go public. No spam — just deals.</p>
+          <div className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
+            <input type="email" placeholder="your@email.com" className="flex-1 px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald" />
+            <button className="px-6 py-3 bg-emerald text-navy text-sm font-bold rounded-xl hover:bg-emerald-600 transition-colors">Notify Me</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Agents Page ──────────────────────────────────────────────────────────────
+function AgentsPage() {
+  const [search, setSearch] = useState("");
+  const [selectedSpec, setSelectedSpec] = useState("All");
+
+  const allSpecs = ["All", "Luxury Homes", "Condominiums", "Pre-Selling", "House & Lot", "Commercial", "Land", "BGC", "Makati", "Laguna"];
+  const filtered = AGENTS.filter((a) => {
+    const matchSearch = !search || a.name.toLowerCase().includes(search.toLowerCase()) || a.specialties.some((s) => s.toLowerCase().includes(search.toLowerCase()));
+    const matchSpec = selectedSpec === "All" || a.specialties.some((s) => s.toLowerCase().includes(selectedSpec.toLowerCase()));
+    return matchSearch && matchSpec;
+  });
+
+  return (
+    <div className="min-h-screen bg-offwhite">
+      {/* Hero */}
+      <section className="bg-navy py-16">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <span className="inline-block bg-emerald/20 text-emerald text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-emerald/30 mb-4">Our Team</span>
+          <h1 className="text-4xl font-bold text-white mb-3" style={{ fontFamily: "var(--font-display)" }}>Meet Our<br /><em>Expert Agents</em></h1>
+          <p className="text-white/60 max-w-md mx-auto text-sm">Licensed brokers and property consultants with deep local market expertise.</p>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <div className="bg-white border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-3 divide-x divide-slate-100">
+          {[["6", "Expert Agents"], ["389", "Properties Sold"], ["56", "Years Combined Exp."]].map(([val, label]) => (
+            <div key={label} className="text-center px-4">
+              <p className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{val}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-10">
+        {/* Search + Filter chips */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1 max-w-sm">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Ic.Search /></span>
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or specialty"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald" />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {allSpecs.map((s) => (
+              <button key={s} onClick={() => setSelectedSpec(s)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${selectedSpec === s ? "bg-navy text-white border-navy" : "bg-white text-slate-600 border-slate-200 hover:border-navy"}`}>{s}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-16">
+          {filtered.map((agent) => (
+            <div key={agent.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <img src={agent.avatar} alt={agent.name} className="w-16 h-16 rounded-2xl object-cover bg-slate-200 flex-shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="font-bold text-navy text-base">{agent.name}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{agent.title}</p>
+                  <p className="text-xs font-semibold mt-0.5" style={{ color: "#D4A373" }}>{agent.agency}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {[["listings", String(agent.listings), "Listings"], ["sold", String(agent.sold), "Sold"], ["yearsExp", String(agent.yearsExp) + "yr", "Exp."]].map(([k, val, lbl]) => (
+                  <div key={k} className="text-center bg-slate-50 rounded-xl py-2">
+                    <p className="text-base font-bold text-navy">{val}</p>
+                    <p className="text-[10px] text-slate-500">{lbl}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-4">{agent.bio}</p>
+              <div className="flex flex-wrap gap-1 mb-4">
+                {agent.specialties.map((s) => (
+                  <span key={s} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{s}</span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <a href={`tel:${agent.phone}`} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200 text-navy text-xs font-semibold hover:bg-slate-50 transition-colors">
+                  <Ic.Phone /> Call
+                </a>
+                <a href={`mailto:${agent.email}`} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-navy text-white text-xs font-semibold hover:bg-navy-800 transition-colors">
+                  <Ic.Mail /> Email
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── About Page ───────────────────────────────────────────────────────────────
+function AboutPage({ setPage }: { setPage: (p: Page) => void }) {
+  const milestones = [
+    { year: "2008", label: "Founded in Makati with a team of 3 licensed brokers." },
+    { year: "2012", label: "Expanded to Laguna and Cavite, becoming the leading south-corridor broker." },
+    { year: "2016", label: "Launched AEY Prime digital listings — first PH real estate firm to go paperless." },
+    { year: "2020", label: "Completed ₱2.8B in transactions despite market disruptions." },
+    { year: "2024", label: "Opened satellite offices in Cebu and Clark for national coverage." },
+    { year: "2025", label: "Introduced AEY Prime Escapes: a curated high-value property platform." },
+  ];
+  const values = [
+    { icon: "", title: "Trust & Transparency", body: "Every listing is verified. Every fee is disclosed upfront. No hidden charges, no bait-and-switch." },
+    { icon: "", title: "Client-First Mindset", body: "We measure success by your satisfaction — not commission volume. Our agents earn through repeat referrals, not pressure tactics." },
+    { icon: "", title: "Market Expertise", body: "From BGC condos to Tagaytay lots, our agents hold deep, hyperlocal knowledge earned through years of on-the-ground experience." },
+    { icon: "", title: "Speed & Efficiency", body: "Same-day viewing schedules, 24-hour inquiry turnaround, and digital reservation processing from anywhere in the world." },
+  ];
+
+  return (
+    <div className="min-h-screen bg-offwhite">
+      {/* Hero */}
+      <section className="relative bg-navy overflow-hidden">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1600&h=700&fit=crop&auto=format" alt="About AEY Prime" className="w-full h-full object-cover opacity-15" />
+          <div className="absolute inset-0 bg-gradient-to-b from-navy/80 to-navy" />
+        </div>
+        <div className="relative max-w-3xl mx-auto px-4 py-24 text-center">
+          <Logo size="lg" />
+          <h1 className="text-4xl md:text-5xl font-bold text-white mt-8 mb-4 leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+            Built on <em>17 Years</em><br />of Philippine Real Estate
+          </h1>
+          <p className="text-white/60 text-base leading-relaxed">AEY Prime Escapes is a full-service real estate brokerage helping Filipinos and global investors find, reserve, and acquire properties across the Philippines — with integrity, clarity, and care.</p>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <div className="bg-white border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-100">
+          {[["₱18B+", "In Transactions"], ["1,284", "Active Listings"], ["3,200+", "Families Served"], ["17", "Years in Business"]].map(([val, label]) => (
+            <div key={label} className="text-center px-6 py-2">
+              <p className="text-3xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{val}</p>
+              <p className="text-xs text-slate-500 mt-1">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Mission */}
+        <section className="py-16 grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald">Our Mission</span>
+            <h2 className="text-3xl font-bold text-navy mt-3 mb-4 leading-snug" style={{ fontFamily: "var(--font-display)" }}>
+              Making Real Estate<br />Accessible & Trustworthy
+            </h2>
+            <p className="text-slate-600 text-sm leading-relaxed mb-4">We believe that finding your home — whether it's your first condo, a vacation lot, or a corporate HQ — should never feel overwhelming, opaque, or predatory.</p>
+            <p className="text-slate-600 text-sm leading-relaxed">AEY Prime Escapes exists to simplify every step: from discovery and site visits to reservation and title transfer. Our team of licensed brokers handles the complexity so you can focus on the decision that matters most.</p>
+          </div>
+          <div className="relative rounded-2xl overflow-hidden h-72 bg-slate-200">
+            <img src="https://images.unsplash.com/photo-1722421492323-eaf9c401befe?w=800&h=500&fit=crop&auto=format" alt="Mission" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy/40 to-transparent" />
+          </div>
+        </section>
+
+        {/* Values */}
+        <section className="pb-16">
+          <div className="text-center mb-10">
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald">What We Stand For</span>
+            <h2 className="text-3xl font-bold text-navy mt-3" style={{ fontFamily: "var(--font-display)" }}>Our Core Values</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {values.map(({ title, body }) => (
+              <div key={title} className="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-md transition-shadow">
+                <h3 className="font-bold text-navy text-base mb-2">{title}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Timeline */}
+        <section className="pb-16">
+          <div className="text-center mb-10">
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald">Our Story</span>
+            <h2 className="text-3xl font-bold text-navy mt-3" style={{ fontFamily: "var(--font-display)" }}>A Decade and a Half of Growth</h2>
+          </div>
+          <div className="relative">
+            <div className="absolute left-8 top-0 bottom-0 w-px bg-slate-200 hidden sm:block" />
+            <div className="space-y-6">
+              {milestones.map(({ year, label }) => (
+                <div key={year} className="flex gap-6 items-start">
+                  <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-navy flex items-center justify-center">
+                    <span className="font-bold text-sm" style={{ fontFamily: "var(--font-display)", color: "#FCB9B2" }}>{year}</span>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-100 p-4 flex-1">
+                    <p className="text-sm text-slate-700 leading-relaxed">{label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="pb-16">
+          <div className="bg-navy rounded-3xl p-10 md:p-14 text-center">
+            <h2 className="text-3xl font-bold text-white mb-3" style={{ fontFamily: "var(--font-display)" }}>Ready to Find Your Property?</h2>
+            <p className="text-white/60 mb-7 text-sm">Browse 1,284 verified listings or talk to one of our expert agents today.</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button onClick={() => setPage("buy")} className="px-8 py-3.5 rounded-xl bg-emerald text-navy font-bold text-sm hover:bg-emerald-600 transition-colors">
+                Browse Listings
+              </button>
+              <button onClick={() => setPage("agents")} className="px-8 py-3.5 rounded-xl border border-white/30 text-white font-semibold text-sm hover:bg-white/10 transition-colors">
+                Talk to an Agent
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// ─── Footer ───────────────────────────────────────────────────────────────────
+function Footer({ setPage }: { setPage: (p: Page) => void }) {
+  return (
+    <footer className="bg-navy text-white/70 text-xs">
+      <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="md:col-span-1">
+          <Logo />
+          <p className="text-white/50 text-xs mt-3 leading-relaxed">Full-service real estate brokerage. Verified listings, trusted agents, seamless reservations.</p>
+        </div>
+        {[
+          { title: "Explore", links: [["Buy Property","buy"],["New Developments","new-developments"],["Find an Agent","agents"],["About Us","about"]] },
+          { title: "Property Types", links: [["Houses","buy"],["Condominiums","buy"],["House & Lot","buy"],["Commercial","buy"]] },
+          { title: "Contact", links: [["info@aeyprime.ph",""],["0970-876-9224",""],["Mon–Sat, 8am–6pm",""]] },
+        ].map(({ title, links }) => (
+          <div key={title}>
+            <p className="text-white font-semibold text-xs uppercase tracking-widest mb-3">{title}</p>
+            <ul className="space-y-2">
+              {links.map(([label, page]) => (
+                <li key={label}>
+                  {page ? (
+                    <button onClick={() => setPage(page as Page)} className="hover:text-white transition-colors">{label}</button>
+                  ) : (
+                    <span>{label}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-white/10 py-4 text-center text-[10px] text-white/30">
+        © {new Date().getFullYear()} AEY Prime Escapes. All rights reserved. Licensed by HLURB · PRC Accredited Brokerage
+      </div>
+    </footer>
+  );
+}
+
+// ─── My Reservations Page ─────────────────────────────────────────────────────
+
+function ReservationDetailDrawer({ rec, onClose, onSelectProperty }: {
+  rec: ReservationRecord; onClose: () => void; onSelectProperty: (p: Property) => void;
+}) {
+  const [showChat, setShowChat] = useState(false);
+  const price = rec.property.price;
+  const balance = price - rec.amtPaid;
+  const dp = rec.downPct ?? 20;
+  const ly = rec.loanYears ?? 20;
+  const monthly = calcMonthly(price, dp, ly);
+  const loanAmtDrawer = Math.round(price * (1 - dp / 100));
+
+  const STATUS_COLOR: Record<string, string> = {
+    "Active": "bg-green-100 text-green-700",
+    "Pending Payment": "bg-amber-100 text-amber-700",
+    "For Review": "bg-blue-100 text-blue-700",
+    "Completed": "bg-slate-100 text-slate-600",
+  };
+
+  const DOCS = [
+    { label: "Reservation Agreement", status: "signed" },
+    { label: "Buyer Information Form", status: "submitted" },
+    { label: "Valid Government ID", status: rec.buyerName ? "submitted" : "pending" },
+    { label: "Deed of Reservation", status: "pending" },
+    { label: "Contract to Sell", status: "pending" },
+    { label: "Title Transfer Documents", status: "pending" },
+  ];
+
+  const TIMELINE = [
+    { label: "Reservation Filed", date: rec.dateCreated, done: true },
+    { label: "Payment Received", date: rec.dateCreated, done: rec.status !== "Pending Payment" },
+    { label: "Document Review", date: "In Progress", done: rec.status === "Active" || rec.status === "Completed" },
+    { label: "Contract Signing", date: "Pending", done: rec.status === "Completed" },
+    { label: "Title Transfer", date: "Pending", done: false },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-white shadow-2xl flex flex-col h-full overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <div>
+            <p className="text-xs text-slate-500 font-mono">{rec.id}</p>
+            <h3 className="font-bold text-navy text-base" style={{ fontFamily: "var(--font-display)" }}>Reservation Record</h3>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"><Ic.X /></button>
+        </div>
+
+        <div className="px-6 py-5 space-y-6 pb-12">
+          {/* Status badge + property */}
+          <div className="flex gap-3 items-start">
+            <img src={rec.property.images[0]} alt={rec.property.title}
+              className="w-20 h-20 rounded-2xl object-cover bg-slate-200 flex-shrink-0 cursor-pointer hover:brightness-95 transition"
+              onClick={() => { onClose(); onSelectProperty(rec.property); }} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[rec.status]}`}>{rec.status}</span>
+              </div>
+              <p className="font-bold text-navy text-sm leading-tight">{rec.property.title}</p>
+              <p className="text-xs text-slate-500 truncate mt-0.5">{rec.property.address}</p>
+              <p className="text-xs font-semibold mt-1" style={{ color: "#D4A373" }}>{formatPriceFull(price)}</p>
+            </div>
+          </div>
+
+          {/* Financial Summary */}
+          <section>
+            <h4 className="text-xs font-bold text-navy uppercase tracking-widest mb-3">Financial Summary</h4>
+            <div className="bg-slate-50 rounded-2xl p-4 space-y-2.5 text-sm">
+              <div className="flex justify-between"><span className="text-slate-500">Total Property Price</span><span className="font-semibold">{formatPriceFull(price)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Payment Plan</span><span className="font-semibold">{rec.plan === "downpayment" ? "20% Down Payment" : "Reservation Fee"}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Amount Paid</span><span className="font-bold" style={{ color: "#D4A373" }}>{formatPriceFull(rec.amtPaid)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Remaining Balance</span><span className="font-semibold text-navy">{formatPriceFull(balance)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Mode of Payment</span><span className="font-semibold">{MOP_LABELS[rec.mop] ?? rec.mop}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Date Filed</span><span className="font-semibold">{rec.dateCreated}</span></div>
+              {rec.plan === "downpayment" && (
+                <div className="border-t border-slate-200 pt-2.5 space-y-1.5">
+                  <p className="text-xs font-bold text-navy mb-2">Monthly Amortization</p>
+                  <div className="flex justify-between text-xs"><span className="text-slate-500">Down Payment ({dp}%)</span><span className="font-semibold">{formatPriceFull(rec.amtPaid)}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-slate-500">Loan Amount ({100 - dp}%)</span><span className="font-semibold">{formatPriceFull(loanAmtDrawer)}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-slate-500">Interest Rate</span><span className="font-semibold">6.5% per annum</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-slate-500">Loan Term</span><span className="font-semibold">{ly} years ({ly * 12} months)</span></div>
+                  <div className="flex justify-between font-bold text-sm pt-1 border-t border-slate-200">
+                    <span className="text-navy">Est. Monthly Payment</span>
+                    <span style={{ color: "#D4A373" }}>{formatPriceFull(monthly)}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Subject to bank approval. Rate may vary.</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Buyer Info */}
+          <section>
+            <h4 className="text-xs font-bold text-navy uppercase tracking-widest mb-3">Buyer Information</h4>
+            <div className="bg-slate-50 rounded-2xl p-4 space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-slate-500">Full Name</span><span className="font-semibold">{rec.buyerName}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Email</span><span className="font-semibold">{rec.buyerEmail}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Phone</span><span className="font-semibold">{rec.buyerPhone}</span></div>
+            </div>
+          </section>
+
+          {/* Assigned Agent */}
+          <section>
+            <h4 className="text-xs font-bold text-navy uppercase tracking-widest mb-3">Assigned Agent</h4>
+            <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3">
+              <img src={rec.property.agent.avatar} alt={rec.property.agent.name} className="w-12 h-12 rounded-full object-cover bg-slate-200 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-navy text-sm">{rec.property.agent.name}</p>
+                <p className="text-xs text-slate-500">{rec.property.agent.agency}</p>
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Ic.Phone />{rec.property.agent.phone}</p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <a href={`tel:${rec.property.agent.phone}`} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-navy text-white text-xs font-semibold">
+                  <Ic.Phone /> Call
+                </a>
+              </div>
+            </div>
+          </section>
+
+          {/* Timeline */}
+          <section>
+            <h4 className="text-xs font-bold text-navy uppercase tracking-widest mb-3">Purchase Timeline</h4>
+            <div className="space-y-0">
+              {TIMELINE.map((t, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${t.done ? "bg-navy border-navy" : "bg-white border-slate-300"}`}>
+                      {t.done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </div>
+                    {i < TIMELINE.length - 1 && <div className={`w-0.5 h-7 mt-1 ${t.done ? "bg-navy" : "bg-slate-200"}`} />}
+                  </div>
+                  <div className="pb-6 min-w-0">
+                    <p className={`text-sm font-semibold ${t.done ? "text-navy" : "text-slate-400"}`}>{t.label}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{t.date}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Document Checklist */}
+          <section>
+            <h4 className="text-xs font-bold text-navy uppercase tracking-widest mb-3">Document Checklist</h4>
+            <div className="space-y-2">
+              {DOCS.map((doc) => (
+                <div key={doc.label} className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${doc.status === "signed" || doc.status === "submitted" ? "bg-navy" : "border-2 border-slate-300"}`}>
+                      {(doc.status === "signed" || doc.status === "submitted") && (
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      )}
+                    </div>
+                    <span className="text-sm text-navy font-medium">{doc.label}</span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                    doc.status === "signed" ? "bg-green-100 text-green-700" :
+                    doc.status === "submitted" ? "bg-blue-100 text-blue-700" :
+                    "bg-slate-200 text-slate-500"
+                  }`}>{doc.status}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Important Reminders */}
+          <section>
+            <h4 className="text-xs font-bold text-navy uppercase tracking-widest mb-3">Important Reminders</h4>
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-2">
+              {[
+                "Your 30-day hold period is running. Complete requirements before the deadline to avoid forfeiture.",
+                "Prepare two valid government-issued IDs for document signing.",
+                "Coordinate with your agent for the Deed of Reservation signing schedule.",
+                "All payments must be verified by AEY Prime Escapes before processing.",
+              ].map((r, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-amber-700">
+                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                  {r}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Actions */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => printReceipt(rec)}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-200 text-navy text-sm font-semibold hover:bg-slate-50 transition-colors">
+              <Ic.Download /> Download Receipt
+            </button>
+            <button
+              onClick={() => setShowChat(true)}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl bg-navy text-white text-sm font-semibold hover:bg-navy-800 transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Chat Agent
+            </button>
+          </div>
+        </div>
+      </div>
+      {showChat && <AgentChatModal agent={rec.property.agent} property={rec.property} onClose={() => setShowChat(false)} />}
+    </div>
+  );
+}
+
+function MyReservationsPage({ reservations, onSelectProperty, onBrowse, onCancel }: {
+  reservations: ReservationRecord[];
+  onSelectProperty: (p: Property) => void;
+  onBrowse: () => void;
+  onCancel: (id: string) => void;
+}) {
+  const [selectedRec, setSelectedRec] = useState<ReservationRecord | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<ReservationRecord | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelDone, setCancelDone] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "completed">("all");
+
+  const STATUS_COLOR: Record<string, string> = {
+    "Active": "bg-green-100 text-green-700",
+    "Pending Payment": "bg-amber-100 text-amber-700",
+    "For Review": "bg-blue-100 text-blue-700",
+    "Completed": "bg-slate-100 text-slate-600",
+  };
+
+  const filtered = reservations.filter((r) => {
+    if (activeTab === "active") return r.status === "Active" || r.status === "For Review";
+    if (activeTab === "completed") return r.status === "Completed";
+    return true;
+  });
+
+  return (
+    <div className="min-h-screen bg-offwhite">
+      {/* Hero */}
+      <section className="bg-navy py-12">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-emerald flex items-center justify-center text-navy font-bold text-sm flex-shrink-0">J</div>
+            <div>
+              <p className="text-white/60 text-xs">Logged in as</p>
+              <p className="text-white font-bold text-sm">Juan dela Cruz</p>
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-white mt-4" style={{ fontFamily: "var(--font-display)" }}>My Reservations</h1>
+          <p className="text-white/60 text-sm mt-1">Track every detail of your reserved properties in one place.</p>
+        </div>
+      </section>
+
+      {/* Summary strip */}
+      <div className="bg-white border-b border-slate-100">
+        <div className="max-w-4xl mx-auto px-4 py-4 grid grid-cols-3 divide-x divide-slate-100">
+          {[
+            ["Total Reserved", String(reservations.length)],
+            ["Total Committed", `₱${(reservations.reduce((s, r) => s + r.amtPaid, 0) / 1_000_000).toFixed(1)}M`],
+            ["Properties Active", String(reservations.filter(r => r.status === "Active").length)],
+          ].map(([label, val]) => (
+            <div key={label} className="text-center px-4">
+              <p className="text-xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{val}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6">
+          {(["all","active","completed"] as const).map((t) => (
+            <button key={t} onClick={() => setActiveTab(t)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold capitalize transition-colors ${activeTab === t ? "bg-navy text-white" : "bg-white text-slate-500 border border-slate-200 hover:border-navy hover:text-navy"}`}>
+              {t === "all" ? `All (${reservations.length})` : t === "active" ? "Active" : "Completed"}
+            </button>
+          ))}
+        </div>
+
+        {/* Reservation cards */}
+        {filtered.length === 0 ? (
+          <div className="text-center py-20 space-y-3">
+            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B89870" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+            </div>
+            <p className="text-slate-500 font-semibold text-base">
+              {reservations.length === 0 ? "You haven't reserved a property yet." : "No reservations in this category."}
+            </p>
+            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+              {reservations.length === 0 ? "Browse our listings and click \"Reserve This Property\" to get started." : "Switch tabs to see all your reservations."}
+            </p>
+            {reservations.length === 0 && (
+              <button onClick={onBrowse} className="mt-2 px-6 py-2.5 rounded-xl bg-emerald text-navy text-sm font-bold hover:bg-emerald-600 transition-colors">Browse Properties</button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filtered.map((rec) => {
+              const price = rec.property.price;
+              const balance = price - rec.amtPaid;
+              return (
+                <div key={rec.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                  <div className="flex gap-4 p-5">
+                    {/* Property image */}
+                    <img
+                      src={rec.property.images[0]} alt={rec.property.title}
+                      className="w-24 h-24 rounded-xl object-cover bg-slate-200 flex-shrink-0 cursor-pointer hover:brightness-95 transition"
+                      onClick={() => { onSelectProperty(rec.property); }}
+                    />
+                    {/* Main info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p className="font-bold text-navy text-sm leading-tight">{rec.property.title}</p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${STATUS_COLOR[rec.status]}`}>{rec.status}</span>
+                      </div>
+                      <p className="text-xs text-slate-500 truncate">{rec.property.city}</p>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5">{rec.id}</p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
+                        <span className="text-slate-500">Plan: <span className="text-navy font-semibold">{rec.plan === "downpayment" ? "20% Down" : "Reservation"}</span></span>
+                        <span className="text-slate-500">Paid: <span className="font-semibold" style={{ color: "#D4A373" }}>{formatPrice(rec.amtPaid)}</span></span>
+                        <span className="text-slate-500">Balance: <span className="text-navy font-semibold">{formatPrice(balance)}</span></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment progress bar */}
+                  <div className="px-5 pb-4">
+                    <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                      <span>Payment Progress</span>
+                      <span>{Math.round((rec.amtPaid / price) * 100)}% paid</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${(rec.amtPaid / price) * 100}%`, backgroundColor: "#D4A373" }} />
+                    </div>
+                  </div>
+
+                  {/* Action row */}
+                  <div className="border-t border-slate-100 px-5 py-3 flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <img src={rec.property.agent.avatar} alt={rec.property.agent.name} className="w-6 h-6 rounded-full object-cover bg-slate-200 flex-shrink-0" />
+                      <span className="text-xs text-slate-500 truncate">Agent: <span className="font-semibold text-navy">{rec.property.agent.name}</span></span>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button onClick={() => setCancelTarget(rec)}
+                        className="px-3 py-1.5 rounded-lg border border-red-200 text-red-500 text-xs font-semibold hover:bg-red-50 transition-colors">
+                        Cancel
+                      </button>
+                      <button onClick={() => setSelectedRec(rec)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-navy text-white text-xs font-semibold hover:bg-navy-800 transition-colors">
+                        View Record
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Browse CTA */}
+        <div className="mt-10 bg-white rounded-2xl border border-slate-100 p-6 text-center">
+          <p className="font-bold text-navy text-base mb-1" style={{ fontFamily: "var(--font-display)" }}>Looking for more properties?</p>
+          <p className="text-xs text-slate-500 mb-4">Browse our full catalog and reserve your next investment today.</p>
+          <button onClick={onBrowse} className="px-6 py-2.5 rounded-xl bg-emerald text-navy text-sm font-bold hover:bg-emerald-600 transition-colors">
+            Browse Properties
+          </button>
+        </div>
+      </div>
+
+      {selectedRec && (
+        <ReservationDetailDrawer
+          rec={selectedRec}
+          onClose={() => setSelectedRec(null)}
+          onSelectProperty={(p) => { setSelectedRec(null); onSelectProperty(p); }}
+        />
+      )}
+
+      {/* Cancel confirmation modal */}
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-navy/40 backdrop-blur-sm" onClick={() => { setCancelTarget(null); setCancelReason(""); setCancelDone(false); }} />
+          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6">
+            {cancelDone ? (
+              <div className="text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8B6F50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <h3 className="text-lg font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Reservation Cancelled</h3>
+                <p className="text-xs text-slate-500">Your reservation for <strong>{cancelTarget.property.title}</strong> has been cancelled. A refund will be processed within 7 business days if applicable.</p>
+                <button onClick={() => { setCancelTarget(null); setCancelReason(""); setCancelDone(false); }}
+                  className="w-full py-3 rounded-xl bg-navy text-white text-sm font-bold hover:bg-navy-800 transition-colors mt-2">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-navy text-base" style={{ fontFamily: "var(--font-display)" }}>Cancel Reservation?</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">This will remove your hold on <strong>{cancelTarget.property.title}</strong>. This action cannot be undone.</p>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700 mb-4">
+                  Reservation fees are refundable within 7 days of filing. After 7 days the fee may be forfeited.
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-navy block mb-1.5">Reason for cancellation <span className="text-slate-400 font-normal">(optional)</span></label>
+                  <div className="space-y-2 mb-3">
+                    {["Found a better property", "Financial constraints", "Change of plans", "Property no longer available", "Other"].map((r) => (
+                      <button key={r} onClick={() => setCancelReason(r)}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-xs border transition-colors ${cancelReason === r ? "bg-navy text-white border-navy" : "border-slate-200 text-navy hover:border-slate-400"}`}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={() => { setCancelTarget(null); setCancelReason(""); }}
+                    className="flex-1 py-3 rounded-xl border border-slate-200 text-navy text-sm font-semibold hover:bg-slate-50 transition-colors">
+                    Keep Reservation
+                  </button>
+                  <button onClick={() => { onCancel(cancelTarget.id); setCancelDone(true); }}
+                    className="flex-1 py-3 rounded-xl bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors">
+                    Yes, Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Root App ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [page, setPage] = useState<Page>("buy");
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authContext, setAuthContext] = useState<{ property: Property; action: string } | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [reservations, setReservations] = useState<ReservationRecord[]>([]);
+
+  const handleSelectProperty = useCallback((p: Property) => {
+    setSelectedProperty(p);
+    setPage("pdp");
+  }, []);
+
+  const handleAuthRequired = useCallback((action: string) => {
+    if (!selectedProperty) return;
+    setAuthContext({ property: selectedProperty, action });
+    setPendingAction(action);
+  }, [selectedProperty]);
+
+  const handleAuthSuccess = useCallback(() => {
+    setIsAuthenticated(true);
+    setAuthContext(null);
+  }, []);
+
+  const showPdp = page === "pdp" && selectedProperty;
+
+  return (
+    <div className="min-h-screen flex flex-col bg-offwhite">
+      <Navbar page={page} setPage={(p) => { setPage(p); if (p !== "pdp") setSelectedProperty(null); }} isAuthenticated={isAuthenticated} onLoginSuccess={() => setIsAuthenticated(true)} />
+
+      <main className="flex-1">
+        {showPdp ? (
+          <PropertyDetailPage
+            property={selectedProperty}
+            isAuthenticated={isAuthenticated}
+            onAuthRequired={handleAuthRequired}
+            onBack={() => { setPage("buy"); setSelectedProperty(null); }}
+            onReserved={(rec) => setReservations((prev) => {
+              const exists = prev.find(r => r.id === rec.id);
+              return exists ? prev : [rec, ...prev];
+            })}
+          />
+        ) : page === "buy" ? (
+          <BuyPage onSelectProperty={handleSelectProperty} />
+        ) : page === "new-developments" ? (
+          <NewDevelopmentsPage onSelectProperty={handleSelectProperty} />
+        ) : page === "agents" ? (
+          <AgentsPage />
+        ) : page === "my-reservations" ? (
+          <MyReservationsPage
+            reservations={reservations}
+            onSelectProperty={handleSelectProperty}
+            onBrowse={() => setPage("buy")}
+            onCancel={(id) => setReservations((prev) => prev.filter((r) => r.id !== id))}
+          />
+        ) : (
+          <AboutPage setPage={setPage} />
+        )}
+      </main>
+
+      {page !== "pdp" && page !== "my-reservations" && <Footer setPage={setPage} />}
+
+      {authContext && (
+        <AuthModal
+          property={authContext.property}
+          actionLabel={authContext.action}
+          onClose={() => setAuthContext(null)}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
+    </div>
+  );
+}

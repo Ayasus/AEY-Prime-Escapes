@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Agents — AEY Prime Escapes</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="navbar-logo"><em>AEY</em>&nbsp;<span>Prime</span>&nbsp;Escapes</a>
+    <nav class="navbar-nav">
+      <a href="index.html">Buy</a>
+      <a href="new-developments.html">New Developments</a>
+      <a href="agents.html" class="active">Agents</a>
+      <a href="about.html">About</a>
+      <a href="my-reservations.html">My Reservations</a>
+    </nav>
+    <div class="navbar-actions">
+      <button class="btn btn-outline btn-sm" id="login-btn" onclick="openModal('auth-modal')">Login</button>
+      <div id="user-menu" class="hidden flex items-center gap-2">
+        <span class="text-xs font-semibold text-navy user-name"></span>
+        <button class="btn btn-sm btn-outline" id="logout-btn">Logout</button>
+      </div>
+      <button class="navbar-hamburger" id="hamburger">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="navbar-mobile" id="mobile-nav">
+    <a href="index.html">Buy</a>
+    <a href="new-developments.html">New Developments</a>
+    <a href="agents.html">Agents</a>
+    <a href="about.html">About</a>
+    <a href="my-reservations.html">My Reservations</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section style="background:var(--navy);padding:56px 0 40px;">
+  <div class="container" style="text-align:center;">
+    <div class="hero-eyebrow">Expert Team</div>
+    <h1 style="font-family:var(--font-display);font-size:2.5rem;color:#fff;margin-bottom:12px;">Meet Our <em style="color:var(--emerald);">Agents</em></h1>
+    <p style="color:rgba(255,255,255,0.6);font-size:0.9375rem;max-width:480px;margin:0 auto;">Experienced property specialists dedicated to finding your perfect home across the Philippines.</p>
+  </div>
+</section>
+
+<!-- Stats Strip -->
+<div style="background:#fff;border-bottom:1px solid var(--slate-100);">
+  <div class="container" style="display:grid;grid-template-columns:repeat(4,1fr);padding:20px 16px;">
+    <div class="stat-item"><div class="stat-val">48</div><div class="stat-lbl">Licensed Agents</div></div>
+    <div class="stat-item"><div class="stat-val">₱2.1B</div><div class="stat-lbl">Total Sales 2024</div></div>
+    <div class="stat-item"><div class="stat-val">1,284</div><div class="stat-lbl">Properties Sold</div></div>
+    <div class="stat-item"><div class="stat-val">4.9★</div><div class="stat-lbl">Average Rating</div></div>
+  </div>
+</div>
+
+<!-- Agents Grid -->
+<section class="section">
+  <div class="container">
+    <div class="agents-grid">
+
+      <!-- Agent 1 -->
+      <div class="card agent-card">
+        <div class="agent-card-header">
+          <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=80" alt="Maria Santos" class="agent-avatar" />
+          <div>
+            <div class="agent-name">Maria Santos</div>
+            <div class="agent-title">Senior Property Specialist</div>
+            <div class="agent-agency">AEY Prime Escapes</div>
+          </div>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat"><div class="agent-stat-val">142</div><div class="agent-stat-lbl">Listings</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">89</div><div class="agent-stat-lbl">Sold</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">4.9★</div><div class="agent-stat-lbl">Rating</div></div>
+        </div>
+        <p class="agent-bio">Maria has been with AEY Prime for 8 years, specializing in high-value residential properties in Metro Manila and Cavite. Known for her attention to detail and exceptional client service.</p>
+        <div class="agent-tags">
+          <span class="agent-tag">House &amp; Lot</span>
+          <span class="agent-tag">Condo</span>
+          <span class="agent-tag">Tagaytay</span>
+          <span class="agent-tag">Metro Manila</span>
+        </div>
+        <div class="agent-actions">
+          <a href="tel:09708769224" class="btn btn-outline btn-sm" style="flex:1;">Call</a>
+          <button class="btn btn-dark btn-sm" style="flex:1;" onclick="openModal('chat-modal')">Message</button>
+        </div>
+      </div>
+
+      <!-- Agent 2 -->
+      <div class="card agent-card">
+        <div class="agent-card-header">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80" alt="Juan Reyes" class="agent-avatar" />
+          <div>
+            <div class="agent-name">Juan Reyes</div>
+            <div class="agent-title">Property Consultant</div>
+            <div class="agent-agency">AEY Prime Escapes</div>
+          </div>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat"><div class="agent-stat-val">98</div><div class="agent-stat-lbl">Listings</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">61</div><div class="agent-stat-lbl">Sold</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">4.8★</div><div class="agent-stat-lbl">Rating</div></div>
+        </div>
+        <p class="agent-bio">Juan specializes in commercial real estate and investment properties across Luzon. He brings 6 years of experience in BGC, Ortigas, and the Clark Freeport Zone market.</p>
+        <div class="agent-tags">
+          <span class="agent-tag">Commercial</span>
+          <span class="agent-tag">BGC</span>
+          <span class="agent-tag">Investment</span>
+        </div>
+        <div class="agent-actions">
+          <a href="tel:09708769224" class="btn btn-outline btn-sm" style="flex:1;">Call</a>
+          <button class="btn btn-dark btn-sm" style="flex:1;" onclick="openModal('chat-modal')">Message</button>
+        </div>
+      </div>
+
+      <!-- Agent 3 -->
+      <div class="card agent-card">
+        <div class="agent-card-header">
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&q=80" alt="Ana Cruz" class="agent-avatar" />
+          <div>
+            <div class="agent-name">Ana Cruz</div>
+            <div class="agent-title">Luxury Homes Specialist</div>
+            <div class="agent-agency">AEY Prime Escapes</div>
+          </div>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat"><div class="agent-stat-val">76</div><div class="agent-stat-lbl">Listings</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">52</div><div class="agent-stat-lbl">Sold</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">5.0★</div><div class="agent-stat-lbl">Rating</div></div>
+        </div>
+        <p class="agent-bio">Ana focuses exclusively on luxury residential properties in Alabang, Makati, and the South. Her design background gives her a unique edge in showcasing premium properties.</p>
+        <div class="agent-tags">
+          <span class="agent-tag">Luxury Homes</span>
+          <span class="agent-tag">Alabang</span>
+          <span class="agent-tag">Makati</span>
+        </div>
+        <div class="agent-actions">
+          <a href="tel:09708769224" class="btn btn-outline btn-sm" style="flex:1;">Call</a>
+          <button class="btn btn-dark btn-sm" style="flex:1;" onclick="openModal('chat-modal')">Message</button>
+        </div>
+      </div>
+
+      <!-- Agent 4 -->
+      <div class="card agent-card">
+        <div class="agent-card-header">
+          <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80" alt="Carlos Lim" class="agent-avatar" />
+          <div>
+            <div class="agent-name">Carlos Lim</div>
+            <div class="agent-title">Visayas Regional Head</div>
+            <div class="agent-agency">AEY Prime Escapes</div>
+          </div>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat"><div class="agent-stat-val">115</div><div class="agent-stat-lbl">Listings</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">78</div><div class="agent-stat-lbl">Sold</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">4.9★</div><div class="agent-stat-lbl">Rating</div></div>
+        </div>
+        <p class="agent-bio">Carlos leads our Visayas operations from Cebu City. Expert in Cebu, Iloilo, and Bacolod markets. His in-depth local knowledge helps clients find hidden gem properties.</p>
+        <div class="agent-tags">
+          <span class="agent-tag">Cebu</span>
+          <span class="agent-tag">Iloilo</span>
+          <span class="agent-tag">Visayas</span>
+        </div>
+        <div class="agent-actions">
+          <a href="tel:09708769224" class="btn btn-outline btn-sm" style="flex:1;">Call</a>
+          <button class="btn btn-dark btn-sm" style="flex:1;" onclick="openModal('chat-modal')">Message</button>
+        </div>
+      </div>
+
+      <!-- Agent 5 -->
+      <div class="card agent-card">
+        <div class="agent-card-header">
+          <img src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&q=80" alt="Rose Tan" class="agent-avatar" />
+          <div>
+            <div class="agent-name">Rose Tan</div>
+            <div class="agent-title">Condo Specialist</div>
+            <div class="agent-agency">AEY Prime Escapes</div>
+          </div>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat"><div class="agent-stat-val">203</div><div class="agent-stat-lbl">Listings</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">134</div><div class="agent-stat-lbl">Sold</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">4.9★</div><div class="agent-stat-lbl">Rating</div></div>
+        </div>
+        <p class="agent-bio">Rose is our top-performing condo specialist in Metro Manila. She has facilitated over ₱500M in condo transactions and is trusted by both first-time buyers and seasoned investors.</p>
+        <div class="agent-tags">
+          <span class="agent-tag">Condo</span>
+          <span class="agent-tag">Pre-Selling</span>
+          <span class="agent-tag">Investment</span>
+        </div>
+        <div class="agent-actions">
+          <a href="tel:09708769224" class="btn btn-outline btn-sm" style="flex:1;">Call</a>
+          <button class="btn btn-dark btn-sm" style="flex:1;" onclick="openModal('chat-modal')">Message</button>
+        </div>
+      </div>
+
+      <!-- Agent 6 -->
+      <div class="card agent-card">
+        <div class="agent-card-header">
+          <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80" alt="Miguel Flores" class="agent-avatar" />
+          <div>
+            <div class="agent-name">Miguel Flores</div>
+            <div class="agent-title">Mindanao Regional Head</div>
+            <div class="agent-agency">AEY Prime Escapes</div>
+          </div>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat"><div class="agent-stat-val">89</div><div class="agent-stat-lbl">Listings</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">57</div><div class="agent-stat-lbl">Sold</div></div>
+          <div class="agent-stat"><div class="agent-stat-val">4.8★</div><div class="agent-stat-lbl">Rating</div></div>
+        </div>
+        <p class="agent-bio">Miguel manages our Mindanao portfolio from Davao City. With deep community ties across Davao, CDO, and Zamboanga, he identifies emerging market opportunities before they peak.</p>
+        <div class="agent-tags">
+          <span class="agent-tag">Davao</span>
+          <span class="agent-tag">CDO</span>
+          <span class="agent-tag">Mindanao</span>
+        </div>
+        <div class="agent-actions">
+          <a href="tel:09708769224" class="btn btn-outline btn-sm" style="flex:1;">Call</a>
+          <button class="btn btn-dark btn-sm" style="flex:1;" onclick="openModal('chat-modal')">Message</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Join Team CTA -->
+<section style="background:var(--emerald-50);border-top:1px solid var(--emerald-100);padding:48px 0;">
+  <div class="container" style="text-align:center;">
+    <h2 style="font-family:var(--font-display);font-size:1.75rem;color:var(--navy);margin-bottom:10px;">Join Our Team</h2>
+    <p style="font-size:0.875rem;color:var(--slate-500);margin-bottom:20px;max-width:420px;margin-left:auto;margin-right:auto;">Are you a licensed real estate broker looking to grow your career? We offer competitive commission splits and extensive marketing support.</p>
+    <a href="about.html#careers" class="btn btn-dark btn-lg">View Career Opportunities</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="site-footer-grid">
+      <div>
+        <div class="footer-brand-name"><em style="font-family:var(--font-display);font-style:italic;">AEY</em> <span>Prime</span> Escapes</div>
+        <p class="footer-brand-desc">Premium real estate services across the Philippines. Connecting families with their perfect escape since 2009.</p>
+      </div>
+      <div class="footer-col"><div class="footer-col-title">Properties</div><ul><li><a href="index.html">Buy</a></li><li><a href="new-developments.html">New Developments</a></li></ul></div>
+      <div class="footer-col"><div class="footer-col-title">Company</div><ul><li><a href="about.html">About Us</a></li><li><a href="agents.html">Our Agents</a></li></ul></div>
+      <div class="footer-col"><div class="footer-col-title">Support</div><ul><li><a href="#">FAQ</a></li><li><a href="#">Privacy Policy</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">© 2025 AEY Prime Escapes. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- Chat Modal -->
+<div class="modal-overlay hidden" id="chat-modal">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">Chat with Agent</div>
+      <button class="modal-close" onclick="closeModal('chat-modal')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:260px;max-height:380px;">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;">
+        <div class="chat-bubble agent">Hello! How can I assist you with your property search today?</div>
+        <div class="chat-time">Just now</div>
+      </div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--slate-100);display:flex;gap:8px;">
+      <input id="chat-input" type="text" class="form-input" placeholder="Type a message…" style="flex:1;" />
+      <button id="chat-send" class="btn btn-dark btn-sm">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="modal-overlay hidden" id="auth-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Sign In to AEY Prime</div>
+      <button class="modal-close" onclick="closeModal('auth-modal')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form id="login-form" class="space-y">
+        <div class="form-group">
+          <label class="form-label">Email address</label>
+          <input id="login-email" type="email" class="form-input" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input id="login-pass" type="password" class="form-input" placeholder="Enter password" required />
+        </div>
+        <button type="submit" class="btn btn-dark btn-full btn-lg">Sign In</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
