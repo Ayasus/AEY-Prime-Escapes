@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { formatPriceFull, monthlyMortgage, type Property } from "../data";
+import { supabase } from "../lib/supabase";
 import { Ic, Logo, StatusBadge } from "./common";
 
 type ReservationRecord = {
@@ -252,7 +253,7 @@ function ReservationModal({ property, onClose, onReserved, onReservationFinished
   );
 }
 
-type ChatMsg = { from: "user" | "agent"; text: string; time: string };
+type ChatMsg = { id?: string; from: "user" | "agent"; text: string; time: string };
 
 function AgentChatModal({ agent, property, onClose }: {
   agent: Property["agent"];
@@ -263,29 +264,120 @@ function AgentChatModal({ agent, property, onClose }: {
   const greet: ChatMsg = { from: "agent", text: `Hi! I'm ${agent.name}. I can answer any questions about ${property.title}. How can I help you today?`, time: now() };
   const [messages, setMessages] = useState<ChatMsg[]>([greet]);
   const [input, setInput] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
+  const [chatUserId, setChatUserId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const conversationId = `property:${property.id}`;
 
-  const QUICK = ["What's the best price?", "Is it ready for occupancy?", "Can I visit the property?", "What are the payment terms?"];
+  useEffect(() => {
+    let active = true;
+
+    const loadChat = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active) return;
+      setChatUserId(user?.id ?? null);
+
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("id, sender_role, message, created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+
+      if (!active || !data?.length) return;
+      setMessages(data.map((message) => ({
+        id: message.id,
+        from: message.sender_role === "agent" ? "agent" : "user",
+        text: message.message,
+        time: new Date(message.created_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }),
+      })));
+    };
+
+    void loadChat();
+    const channel = supabase.channel(`chat:${conversationId}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      }, (payload) => {
+        const message = payload.new as { id: string; sender_role: "user" | "agent"; message: string; created_at: string };
+        setMessages((current) => current.some((item) => item.id === message.id) ? current : [...current, {
+          id: message.id,
+          from: message.sender_role,
+          text: message.message,
+          time: new Date(message.created_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" }),
+        }]);
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
+  }, [conversationId]);
+
+  const QUICK = [
+    "What's the best price?",
+    "Is it ready for occupancy?",
+    "What is the reservation fee?",
+    "What documents do I need?",
+    "What building amenities are included?",
+    "Can I visit the property?",
+    "What are the payment terms?",
+    "Can I cancel my reservation?",
+  ];
 
   const sendMsg = (text: string) => {
-    if (!text.trim()) return;
-    const userMsg: ChatMsg = { from: "user", text: text.trim(), time: now() };
+    const message = text.trim();
+    if (!message || isReplying) return;
+    const userMsg: ChatMsg = { from: "user", text: message, time: now() };
     setMessages((m) => [...m, userMsg]);
     setInput("");
-    setTimeout(() => {
-      const replies: Record<string, string> = {
-        "what's the best price?": `The listed price for ${property.title} is ${formatPriceFull(property.price)}. There may be room for negotiation — I'd be happy to discuss further. Please call me at ${agent.phone}.`,
-        "is it ready for occupancy?": property.status === "For Sale" ? "Yes! This property is ready for move-in. We can arrange a site visit at your convenience." : `This property is currently ${property.status}. I can give you more details or add you to our waitlist.`,
-        "can i visit the property?": "Absolutely! Just let me know your preferred date and time and I'll set it up. You can also call me directly at " + agent.phone + ".",
-        "what are the payment terms?": `We offer flexible terms: 20% down payment with the balance financed via bank loan or in-house financing. Reservation fee is ₱50,000 to lock in the unit. Call me at ${agent.phone} for a full proposal.`,
-      };
-      const key = text.trim().toLowerCase();
-      const reply = replies[key] ?? `Thanks for your message! I'll get back to you shortly. For urgent inquiries, please call ${agent.phone} directly.`;
+    setIsReplying(true);
+    void supabase.from("chat_messages").insert({
+      conversation_id: conversationId,
+      property_id: property.id,
+      agent_id: agent.name,
+      sender_id: chatUserId,
+      sender_role: "user",
+      message,
+    }).then(({ error }) => {
+      if (!error) {
+        setIsReplying(false);
+        return;
+      }
+
+      setTimeout(() => {
+      const key = message.toLowerCase();
+      let reply = `Thanks for your message! I'll get back to you shortly. For urgent inquiries, please call ${agent.phone} directly.`;
+
+      if (key.includes("best price") || key.includes("lowest price") || key.includes("discount") || key.includes("negotiate")) {
+        reply = `The listed price for ${property.title} is ${formatPriceFull(property.price)}. There may be room for negotiation depending on the payment plan. Please call me at ${agent.phone} so I can prepare the best proposal.`;
+      } else if (key.includes("occupancy") || key.includes("move in") || key.includes("move-in") || key.includes("ready")) {
+        reply = property.status === "For Sale" ? `This ${property.type.toLowerCase()} is available for purchase and we can confirm the turnover or move-in schedule with the seller. I can also arrange a site visit.` : `This property is currently ${property.status}. I can confirm the next availability and add you to the priority list.`;
+      } else if (key.includes("reservation fee") || key.includes("reserve") || key.includes("reservation")) {
+        reply = `The reservation fee is ₱50,000 for a reservation plan. It holds the property for 30 days while we complete verification and documents. Your reservation record will show the payment, balance, and next steps.`;
+      } else if (key.includes("document") || key.includes("requirement") || key.includes("valid id") || key.includes("government id")) {
+        reply = "For reservation processing, please prepare one or two valid government-issued IDs, your contact details, and proof of payment. I will guide you through the buyer information form and document signing schedule.";
+      } else if (key.includes("amenit") || key.includes("building") || key.includes("facility") || key.includes("included")) {
+        const amenities = property.amenities.slice(0, 5).join(", ");
+        reply = amenities ? `The listed features include ${amenities}. I can confirm building rules, parking, and any association fees during your viewing.` : "I can send you the complete building and community features. Please call me so I can explain the inclusions and any applicable association fees.";
+      } else if (key.includes("visit") || key.includes("viewing") || key.includes("site visit") || key.includes("schedule")) {
+        reply = `Absolutely. We can arrange a site visit around your preferred date and time. Please call or message me at ${agent.phone}, and I will confirm the viewing schedule for ${property.title}.`;
+      } else if (key.includes("payment") || key.includes("down payment") || key.includes("monthly") || key.includes("financ")) {
+        reply = `We offer a reservation plan or a down payment plan. The estimate shown is based on 20% down, a 20-year term, and 6.5% annual interest. Final terms depend on bank approval. I can prepare a full payment proposal at ${agent.phone}.`;
+      } else if (key.includes("cancel") || key.includes("refund") || key.includes("forfeit")) {
+        reply = "Reservation cancellation and refund terms depend on the signed reservation agreement and payment status. Please contact me before cancelling so I can check the applicable deadline and any refundable amount.";
+      } else if (key.includes("status") || key.includes("available") || key.includes("still on the market")) {
+        reply = `The current listing status is ${property.status}. I can confirm the latest availability with the seller and hold the unit only after the reservation process is completed.`;
+      }
       setMessages((m) => [...m, { from: "agent", text: reply, time: now() }]);
-    }, 900);
+      setIsReplying(false);
+      }, 900);
+    });
   };
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isReplying]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -321,16 +413,53 @@ function AgentChatModal({ agent, property, onClose }: {
           <div ref={bottomRef} />
         </div>
 
-        {messages.length <= 2 && (
-          <div className="px-4 pb-2 flex gap-2 overflow-x-auto">
-            {QUICK.map((q) => (
-              <button key={q} onClick={() => sendMsg(q)}
-                className="flex-shrink-0 text-[11px] font-semibold px-3 py-1.5 rounded-full border border-slate-200 bg-white text-navy hover:border-navy hover:bg-slate-50 transition-colors">
-                {q}
-              </button>
-            ))}
+        <div className="px-4 pb-2 flex gap-2 overflow-x-auto">
+          {QUICK.map((q) => (
+            <button key={q} onClick={() => sendMsg(q)} disabled={isReplying}
+              className="flex-shrink-0 text-[11px] font-semibold px-3 py-1.5 rounded-full border border-slate-200 bg-white text-navy hover:border-navy hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {q}
+            </button>
+          ))}
+        </div>
+
+        {isReplying && (
+          <div className="px-4 pb-2 flex items-center gap-2 text-xs text-slate-400">
+            <img src={agent.avatar} alt="" className="w-6 h-6 rounded-full object-cover" />
+            <span>{agent.name} is typing...</span>
+            <span className="flex gap-0.5">
+              <span className="w-1 h-1 rounded-full bg-slate-400 animate-pulse" />
+              <span className="w-1 h-1 rounded-full bg-slate-400 animate-pulse [animation-delay:150ms]" />
+              <span className="w-1 h-1 rounded-full bg-slate-400 animate-pulse [animation-delay:300ms]" />
+            </span>
           </div>
         )}
+
+        <form
+          onSubmit={(event) => { event.preventDefault(); sendMsg(input); }}
+          className="px-4 py-3 border-t border-slate-100 flex gap-2 items-end"
+        >
+          <textarea
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                sendMsg(input);
+              }
+            }}
+            rows={1}
+            placeholder="Ask about the building or reservation..."
+            className="flex-1 resize-none border border-slate-200 rounded-2xl px-4 py-2.5 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-emerald transition"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || isReplying}
+            aria-label="Send message"
+            className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${input.trim() && !isReplying ? "bg-navy text-white hover:bg-navy-800" : "bg-slate-200 text-slate-400"}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+          </button>
+        </form>
       </div>
     </div>
   );
