@@ -1879,7 +1879,7 @@ function ReservationDetailDrawer({ rec, onClose, onSelectProperty }: {
   );
 }
 
-function MyReservationsPage({ reservations, currentUser, onSelectProperty, onBrowse, onCancel }: {
+function ReservationsDashboardPage({ reservations, currentUser, onSelectProperty, onBrowse, onCancel }: {
   reservations: ReservationRecord[];
   currentUser: { name: string; email: string } | null;
   onSelectProperty: (p: Property) => void;
@@ -2177,6 +2177,10 @@ export default function App() {
               const exists = prev.find(r => r.id === rec.id);
               return exists ? prev : [rec, ...prev];
             })}
+            onReservationFinished={() => {
+              setPage("my-reservations");
+              setSelectedProperty(null);
+            }}
           />
         ) : page === "buy" ? (
           <BuyPage onSelectProperty={handleSelectProperty} />
@@ -2185,7 +2189,7 @@ export default function App() {
         ) : page === "agents" ? (
           <AgentsPage />
         ) : page === "my-reservations" ? (
-          <MyReservationsPage
+          <ReservationsDashboardPage
             reservations={reservations}
             currentUser={currentUser}
             onSelectProperty={handleSelectProperty}

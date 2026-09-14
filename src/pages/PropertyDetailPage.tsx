@@ -17,10 +17,11 @@ type ReservationRecord = {
   downPct?: number;
 };
 
-function ReservationModal({ property, onClose, onReserved }: {
+function ReservationModal({ property, onClose, onReserved, onReservationFinished }: {
   property: Property;
   onClose: () => void;
   onReserved?: (rec: ReservationRecord) => void;
+  onReservationFinished?: () => void;
 }) {
   const [step, setStep] = useState(1);
   const [plan, setPlan] = useState<"reservation" | "downpayment" | null>(null);
@@ -214,6 +215,12 @@ function ReservationModal({ property, onClose, onReserved }: {
           )}
           <button
             onClick={() => {
+              if (step === 4) {
+                onClose();
+                onReservationFinished?.();
+                return;
+              }
+
               if (!canProceed) return;
               const next = step + 1;
               setStep(next);
@@ -237,7 +244,7 @@ function ReservationModal({ property, onClose, onReserved }: {
             disabled={!canProceed || (step === 1 && !plan)}
             className={`flex-1 py-3 rounded-xl text-sm font-bold transition-colors ${(!canProceed || (step === 1 && !plan)) ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-emerald text-navy hover:bg-emerald-600"}`}
           >
-            {step === 3 ? `Confirm — Pay ${formatPriceFull(amtDueToday)}` : "Continue"}
+            {step === 3 ? `Confirm — Pay ${formatPriceFull(amtDueToday)}` : step === 4 ? "Go to My Reservations" : "Continue"}
           </button>
         </div>
       </div>
@@ -329,12 +336,13 @@ function AgentChatModal({ agent, property, onClose }: {
   );
 }
 
-export default function PropertyDetailPage({ property, isAuthenticated, onAuthRequired, onBack, onReserved }: {
+export default function PropertyDetailPage({ property, isAuthenticated, onAuthRequired, onBack, onReserved, onReservationFinished }: {
   property: Property;
   isAuthenticated: boolean;
   onAuthRequired: (action: string) => void;
   onBack: () => void;
   onReserved?: (rec: ReservationRecord) => void;
+  onReservationFinished?: () => void;
 }) {
   const [activeImg, setActiveImg] = useState(0);
   const [showReservation, setShowReservation] = useState(false);
@@ -489,7 +497,7 @@ export default function PropertyDetailPage({ property, isAuthenticated, onAuthRe
         </button>
       </div>
 
-      {showReservation && <ReservationModal property={property} onClose={() => setShowReservation(false)} onReserved={onReserved} />}
+      {showReservation && <ReservationModal property={property} onClose={() => setShowReservation(false)} onReserved={onReserved} onReservationFinished={onReservationFinished} />}
       {showChat && <AgentChatModal agent={property.agent} property={property} onClose={() => setShowChat(false)} />}
     </div>
   );
