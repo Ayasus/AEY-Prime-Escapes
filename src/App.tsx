@@ -15,34 +15,26 @@ import { Ic, Logo, StatusBadge } from "./escapes/common";
 
 // ─── Page type ────────────────────────────────────────────────────────────────
 type Page = "buy" | "new-developments" | "agents" | "about" | "pdp" | "my-reservations";
-type AuthUser = { name: string; email: string; phone: string; password: string };
+type AuthUser = { name: string; email: string; phone: string };
 
-const AUTH_USERS_KEY = "aey-prime-users";
 const AUTH_CURRENT_USER_KEY = "aey-prime-current-user";
 const RESERVATIONS_KEY_PREFIX = "aey-prime-reservations-";
 
-const getStoredUsers = (): AuthUser[] => {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(AUTH_USERS_KEY);
-    return raw ? (JSON.parse(raw) as AuthUser[]) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveStoredUsers = (users: AuthUser[]) => {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users));
-};
-
 const normalizeEmail = (email?: string | null) => (email ?? "").trim().toLowerCase();
 
-const getAuthUserProfile = (user?: { email?: string | null; user_metadata?: { full_name?: string | null; name?: string | null } } | null) => {
+const getAuthErrorMessage = (error?: { message?: string } | null) => {
+  if (error?.message === "Failed to fetch") {
+    return "Cannot reach Supabase. Check VITE_SUPABASE_URL and your internet connection.";
+  }
+  return error?.message || "Authentication failed. Please try again.";
+};
+
+const getAuthUserProfile = (user?: { email?: string | null; user_metadata?: { full_name?: string | null; name?: string | null; phone?: string | null } } | null) => {
   if (!user?.email) return null;
   const email = normalizeEmail(user.email);
   const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split("@")[0];
-  return { name, email };
+  const phone = user.user_metadata?.phone?.trim() || "";
+  return { name, email, phone };
 };
 
 const syncSupabaseUser = async (user: AuthUser) => {
@@ -53,7 +45,6 @@ const syncSupabaseUser = async (user: AuthUser) => {
       email: normalizeEmail(user.email),
       name: user.name,
       phone: user.phone,
-      password: user.password,
     }, { onConflict: "email" });
 
     if (error) throw error;
@@ -62,22 +53,9 @@ const syncSupabaseUser = async (user: AuthUser) => {
   }
 };
 
-const loadSupabaseUsers = async (): Promise<AuthUser[]> => {
-  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) return getStoredUsers();
-
-  try {
-    const { data, error } = await supabase.from("profiles").select("name, email, phone, password");
-    if (error) throw error;
-
-    return (data ?? []).map((row) => ({
-      name: String(row.name ?? ""),
-      email: normalizeEmail(String(row.email ?? "")),
-      phone: String(row.phone ?? ""),
-      password: String(row.password ?? ""),
-    })).filter((user) => user.email && user.name);
-  } catch {
-    return getStoredUsers();
-  }
+const syncAuthProfile = async (user: { name: string; email: string; phone?: string }) => {
+  if (!user.phone) return;
+  await syncSupabaseUser({ name: user.name, email: user.email, phone: user.phone });
 };
 
 const loadSupabaseReservations = async (email?: string | null): Promise<ReservationRecord[]> => {
@@ -224,7 +202,12 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
       setLoading(false);
 
       if (error) {
-        setError(error.message || "Unable to create your account right now.");
+        setError(getAuthErrorMessage(error));
+        return;
+      }
+
+      if (!data.session) {
+        setError("Account created. Check your email to confirm your account before signing in.");
         return;
       }
 
@@ -238,10 +221,8 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
         name: profileUser.name,
         email: profileUser.email,
         phone: form.phone.trim(),
-        password: form.password,
       };
 
-      saveStoredUsers([...getStoredUsers(), localUser]);
       await syncSupabaseUser(localUser);
       setStoredCurrentUser({ name: profileUser.name, email: profileUser.email });
       onSuccess(profileUser);
@@ -256,7 +237,7 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
     setLoading(false);
 
     if (error) {
-      setError(error.message || "Invalid email or password. Please try again.");
+      setError(getAuthErrorMessage(error));
       return;
     }
 
@@ -1010,7 +991,7 @@ function InquireModal({ property, onClose }: { property: Property; onClose: () =
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setTimeout(() => { setLoading(false); setSent(true); }, 1200);
@@ -1371,7 +1352,7 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     const emailValue = email.trim().toLowerCase();
@@ -1394,36 +1375,56 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         return;
       }
 
-      const users = getStoredUsers();
-      const exists = users.some((user) => user.email.toLowerCase() === emailValue);
-      if (exists) {
-        setError("An account with this email already exists. Please log in instead.");
+      setLoading(true);
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: emailValue,
+        password,
+        options: { data: { full_name: name.trim(), phone: phone.trim() } },
+      });
+      setLoading(false);
+
+      if (signUpError) {
+        setError(getAuthErrorMessage(signUpError));
         return;
       }
 
-      const nextUser: AuthUser = { name: name.trim(), email: emailValue, phone: phone.trim(), password };
-      saveStoredUsers([...users, nextUser]);
-      setStoredCurrentUser({ name: nextUser.name, email: nextUser.email });
-      setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
-        onSuccess({ name: nextUser.name, email: nextUser.email });
-      }, 800);
+      if (!data.session) {
+        setError("Account created. Check your email to confirm your account before signing in.");
+        return;
+      }
+
+      const profileUser = getAuthUserProfile(data.user);
+      if (!profileUser) {
+        setError("Your account was created. Check your email to confirm it before signing in.");
+        return;
+      }
+
+      await syncSupabaseUser({ name: profileUser.name, email: profileUser.email, phone: phone.trim() });
+      setStoredCurrentUser(profileUser);
+      onSuccess(profileUser);
       return;
     }
 
-    const match = getStoredUsers().find((user) => user.email.toLowerCase() === emailValue && user.password === password);
-    if (!match) {
-      setError("Invalid email or password. Please try again.");
-      return;
-    }
-
-    setStoredCurrentUser({ name: match.name, email: match.email });
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onSuccess({ name: match.name, email: match.email });
-    }, 800);
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: emailValue,
+      password,
+    });
+    setLoading(false);
+
+    if (signInError) {
+      setError(getAuthErrorMessage(signInError));
+      return;
+    }
+
+    const profileUser = getAuthUserProfile(data.user);
+    if (!profileUser) {
+      setError("Login succeeded, but no Supabase user profile was returned.");
+      return;
+    }
+
+    setStoredCurrentUser(profileUser);
+    onSuccess(profileUser);
   };
 
   return (
@@ -2086,6 +2087,7 @@ export default function App() {
 
       const sessionUser = getAuthUserProfile(session?.user ?? null);
       if (sessionUser) {
+        await syncAuthProfile(sessionUser);
         setCurrentUser(sessionUser);
         setIsAuthenticated(true);
         setReservations(getStoredReservations(sessionUser.email));
@@ -2102,6 +2104,7 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const nextUser = getAuthUserProfile(session?.user ?? null);
+      void (nextUser && syncAuthProfile(nextUser));
       setCurrentUser(nextUser);
       setIsAuthenticated(Boolean(nextUser));
       setReservations(getStoredReservations(nextUser?.email));
