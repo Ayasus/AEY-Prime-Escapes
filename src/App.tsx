@@ -4,9 +4,55 @@ import {
   formatPrice, formatPriceFull, monthlyMortgage,
   type Property,
 } from "./data";
+import {
+  BuyPage,
+  PropertyDetailPage,
+  NewDevelopmentsPage,
+  AgentsPage,
+  AboutPage,
+  MyReservationsPage,
+} from "./pages";
 
 // ─── Page type ────────────────────────────────────────────────────────────────
 type Page = "buy" | "new-developments" | "agents" | "about" | "pdp" | "my-reservations";
+type AuthUser = { name: string; email: string; phone: string; password: string };
+
+const AUTH_USERS_KEY = "aey-prime-users";
+const AUTH_CURRENT_USER_KEY = "aey-prime-current-user";
+
+const getStoredUsers = (): AuthUser[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(AUTH_USERS_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveStoredUsers = (users: AuthUser[]) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users));
+};
+
+const getStoredCurrentUser = (): { name: string; email: string } | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_CURRENT_USER_KEY);
+    return raw ? (JSON.parse(raw) as { name: string; email: string }) : null;
+  } catch {
+    return null;
+  }
+};
+
+const setStoredCurrentUser = (user: { name: string; email: string } | null) => {
+  if (typeof window === "undefined") return;
+  if (!user) {
+    window.localStorage.removeItem(AUTH_CURRENT_USER_KEY);
+    return;
+  }
+  window.localStorage.setItem(AUTH_CURRENT_USER_KEY, JSON.stringify(user));
+};
 
 // ─── Inline Icons ─────────────────────────────────────────────────────────────
 const Ic = {
@@ -42,8 +88,6 @@ const Ic = {
   Users: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   Home: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
   Menu: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
-  Google: () => <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>,
-  Apple: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>,
 };
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
@@ -205,14 +249,16 @@ interface AuthModalProps {
   property: Property;
   actionLabel: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (user?: { name: string; email: string }) => void;
 }
 
 function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPw, setShowPw] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const heading = mode === "login"
     ? `Sign in to ${actionLabel}`
@@ -220,8 +266,55 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    const email = form.email.trim().toLowerCase();
+
+    if (mode === "signup") {
+      if (!form.name.trim()) {
+        setError("Please enter your full name.");
+        return;
+      }
+      if (form.password.length < 6) {
+        setError("Password must be at least 6 characters long.");
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError("Passwords do not match. Please confirm again.");
+        return;
+      }
+
+      const users = getStoredUsers();
+      const exists = users.some((user) => user.email.toLowerCase() === email);
+      if (exists) {
+        setError("An account with this email already exists. Please log in instead.");
+        return;
+      }
+
+      const phone = form.phone.trim();
+      const user = { name: form.name.trim(), email, phone, password: form.password };
+      saveStoredUsers([...users, user]);
+      setStoredCurrentUser({ name: user.name, email: user.email });
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        onSuccess({ name: user.name, email: user.email });
+      }, 900);
+      return;
+    }
+
+    const users = getStoredUsers();
+    const user = users.find((entry) => entry.email.toLowerCase() === email && entry.password === form.password);
+    if (!user) {
+      setError("Invalid email or password. Please try again.");
+      return;
+    }
+
+    setStoredCurrentUser({ name: user.name, email: user.email });
     setLoading(true);
-    setTimeout(() => { setLoading(false); onSuccess(); }, 1200);
+    setTimeout(() => {
+      setLoading(false);
+      onSuccess({ name: user.name, email: user.email });
+    }, 900);
   };
 
   return (
@@ -254,21 +347,8 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
             <p className="text-xs text-slate-500 mt-1.5">Your account keeps your reservation hold and docs secure.</p>
           </div>
 
-          {/* Social buttons */}
-          <div className="space-y-2.5 mb-5">
-            <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-slate-200 text-navy text-sm font-semibold hover:bg-slate-50 transition-colors">
-              <Ic.Google /> Continue with Google
-            </button>
-            <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl bg-navy text-white text-sm font-semibold hover:bg-navy-800 transition-colors">
-              <Ic.Apple /> Continue with Apple
-            </button>
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-400 font-medium">or sign in with email</span>
-            <div className="flex-1 h-px bg-slate-200" />
+          <div className="mb-5 text-center text-xs text-slate-500">
+            {mode === "login" ? "Use your email and password to continue." : "Create your account using your email address and phone number."}
           </div>
 
           {/* Form */}
@@ -277,7 +357,7 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
               <div>
                 <label className="text-xs font-semibold text-navy block mb-1.5">Full Name</label>
                 <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder=""
+                  placeholder="Juan dela Cruz"
                   className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
               </div>
             )}
@@ -318,6 +398,28 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
               </div>
             </div>
 
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Confirm Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPw ? "text" : "password"}
+                    required
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                    placeholder="Repeat your password"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition"
+                  />
+                  <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                    <Ic.Eye open={showConfirmPw} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
+
             <button
               type="submit"
               disabled={loading}
@@ -333,12 +435,12 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
           {mode === "login" ? (
             <>
               <span className="text-slate-500">Don't have an account?</span>
-              <button onClick={() => setMode("signup")} className="font-semibold hover:underline" style={{ color: "#D4A373" }}>Create one</button>
+              <button onClick={() => { setMode("signup"); setError(""); }} className="font-semibold hover:underline" style={{ color: "#D4A373" }}>Create one</button>
             </>
           ) : (
             <>
               <span className="text-slate-500">Already have an account?</span>
-              <button onClick={() => setMode("login")} className="font-semibold hover:underline" style={{ color: "#D4A373" }}>Log in</button>
+              <button onClick={() => { setMode("login"); setError(""); }} className="font-semibold hover:underline" style={{ color: "#D4A373" }}>Log in</button>
             </>
           )}
         </div>
@@ -1304,18 +1406,71 @@ function LookingModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Shared Navbar ────────────────────────────────────────────────────────────
-function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (user?: { name: string; email: string }) => void }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    const emailValue = email.trim().toLowerCase();
+
+    if (mode === "signup") {
+      if (!name.trim()) {
+        setError("Please enter your full name.");
+        return;
+      }
+      if (!phone.trim()) {
+        setError("Please enter your phone number.");
+        return;
+      }
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters long.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match. Please confirm again.");
+        return;
+      }
+
+      const users = getStoredUsers();
+      const exists = users.some((user) => user.email.toLowerCase() === emailValue);
+      if (exists) {
+        setError("An account with this email already exists. Please log in instead.");
+        return;
+      }
+
+      const nextUser: AuthUser = { name: name.trim(), email: emailValue, phone: phone.trim(), password };
+      saveStoredUsers([...users, nextUser]);
+      setStoredCurrentUser({ name: nextUser.name, email: nextUser.email });
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        onSuccess({ name: nextUser.name, email: nextUser.email });
+      }, 800);
+      return;
+    }
+
+    const match = getStoredUsers().find((user) => user.email.toLowerCase() === emailValue && user.password === password);
+    if (!match) {
+      setError("Invalid email or password. Please try again.");
+      return;
+    }
+
+    setStoredCurrentUser({ name: match.name, email: match.email });
     setLoading(true);
-    setTimeout(() => { setLoading(false); onSuccess(); }, 1200);
+    setTimeout(() => {
+      setLoading(false);
+      onSuccess({ name: match.name, email: match.email });
+    }, 800);
   };
 
   return (
@@ -1332,19 +1487,8 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"><Ic.X /></button>
         </div>
         <div className="px-6 py-5">
-          {/* Social buttons */}
-          <div className="space-y-2 mb-4">
-            {[["G", "Continue with Google", "#4285F4"],["F", "Continue with Facebook", "#1877F2"]].map(([icon, label, color]) => (
-              <button key={label} onClick={() => { setTimeout(onSuccess, 800); }}
-                className="w-full flex items-center justify-center gap-2 border border-slate-200 rounded-xl py-2.5 text-sm font-semibold text-navy hover:bg-slate-50 transition-colors">
-                <span className="font-bold text-base" style={{ color: color as string }}>{icon}</span> {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-xs text-slate-400">or</span>
-            <div className="flex-1 h-px bg-slate-200" />
+          <div className="mb-4 text-center text-xs text-slate-500">
+            {mode === "login" ? "Use your email and password to continue." : "Create your account using your email and phone number."}
           </div>
           <form onSubmit={handleSubmit} className="space-y-3">
             {mode === "signup" && (
@@ -1359,6 +1503,13 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="juan@email.com"
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
             </div>
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Phone Number</label>
+                <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+63 9XX XXX XXXX"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+              </div>
+            )}
             <div>
               <label className="text-xs font-semibold text-navy block mb-1.5">Password</label>
               <div className="relative">
@@ -1371,6 +1522,21 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
                 </button>
               </div>
             </div>
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Confirm Password</label>
+                <div className="relative">
+                  <input type={showConfirmPw ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+                  <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-navy">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      {showConfirmPw ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></> : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+            {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
             <button type="submit" disabled={loading}
               className={`w-full py-3.5 rounded-xl text-sm font-bold transition-colors ${loading ? "bg-emerald/60 text-navy cursor-not-allowed" : "bg-emerald text-navy hover:bg-emerald-600"}`}>
               {loading ? (mode === "login" ? "Signing in…" : "Creating account…") : (mode === "login" ? "Sign In" : "Create Account")}
@@ -1389,8 +1555,8 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   );
 }
 
-function Navbar({ page, setPage, isAuthenticated, onLoginSuccess }: {
-  page: Page; setPage: (p: Page) => void; isAuthenticated: boolean; onLoginSuccess: () => void;
+function Navbar({ page, setPage, isAuthenticated, currentUser, onLoginSuccess, onLogout }: {
+  page: Page; setPage: (p: Page) => void; isAuthenticated: boolean; currentUser: { name: string; email: string } | null; onLoginSuccess: (user?: { name: string; email: string }) => void; onLogout: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLooking, setShowLooking] = useState(false);
@@ -1401,6 +1567,8 @@ function Navbar({ page, setPage, isAuthenticated, onLoginSuccess }: {
     { label: "Agents", page: "agents" },
     { label: "About", page: "about" },
   ];
+
+  const initials = currentUser?.name?.trim()?.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "U";
 
   return (
     <>
@@ -1416,15 +1584,20 @@ function Navbar({ page, setPage, isAuthenticated, onLoginSuccess }: {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            {isAuthenticated ? (
-              <button onClick={() => setPage("my-reservations")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors ${page === "my-reservations" ? "bg-slate-100" : "hover:bg-slate-50"}`}>
-                <div className="w-8 h-8 rounded-full bg-emerald flex items-center justify-center text-navy text-xs font-bold">J</div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-xs font-bold text-navy leading-none">Juan</p>
-                  <p className="text-[10px] text-slate-500 leading-none mt-0.5">My Reservations</p>
-                </div>
-              </button>
+            {isAuthenticated && currentUser ? (
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage("my-reservations")}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors ${page === "my-reservations" ? "bg-slate-100" : "hover:bg-slate-50"}`}>
+                  <div className="w-8 h-8 rounded-full bg-emerald flex items-center justify-center text-navy text-xs font-bold">{initials}</div>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-xs font-bold text-navy leading-none">{currentUser.name.split(" ")[0]}</p>
+                    <p className="text-[10px] text-slate-500 leading-none mt-0.5">My Reservations</p>
+                  </div>
+                </button>
+                <button onClick={onLogout} className="hidden sm:inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-slate-600 hover:text-navy hover:bg-slate-50 rounded-xl transition-colors">
+                  Logout
+                </button>
+              </div>
             ) : (
               <>
                 <button onClick={() => setShowLogin(true)} className="hidden sm:block text-sm font-semibold text-navy hover:text-emerald transition-colors px-3 py-2">Log in</button>
@@ -1444,7 +1617,12 @@ function Navbar({ page, setPage, isAuthenticated, onLoginSuccess }: {
                 {label}
               </button>
             ))}
-            {!isAuthenticated && (
+            {isAuthenticated && currentUser ? (
+              <button onClick={() => { onLogout(); setMobileOpen(false); }}
+                className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                Logout
+              </button>
+            ) : (
               <button onClick={() => { setShowLogin(true); setMobileOpen(false); }}
                 className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold text-navy hover:bg-slate-50">
                 Log in
@@ -1454,639 +1632,8 @@ function Navbar({ page, setPage, isAuthenticated, onLoginSuccess }: {
         )}
       </header>
       {showLooking && <LookingModal onClose={() => setShowLooking(false)} />}
-      {showLogin && <NavLoginModal onClose={() => setShowLogin(false)} onSuccess={() => { setShowLogin(false); onLoginSuccess(); }} />}
+      {showLogin && <NavLoginModal onClose={() => setShowLogin(false)} onSuccess={(user) => { setShowLogin(false); onLoginSuccess(user); }} />}
     </>
-  );
-}
-
-// ─── Property Detail Page ─────────────────────────────────────────────────────
-function PropertyDetailPage({ property, isAuthenticated, onAuthRequired, onBack, onReserved }: {
-  property: Property;
-  isAuthenticated: boolean;
-  onAuthRequired: (action: string) => void;
-  onBack: () => void;
-  onReserved?: (rec: ReservationRecord) => void;
-}) {
-  const [activeImg, setActiveImg] = useState(0);
-  const [showReservation, setShowReservation] = useState(false);
-  const [showChat, setShowChat] = useState(false);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
-
-  const amenityIcons: Record<string, React.ReactElement> = {
-    "Garage (3-car)": <Ic.Car />, "Garage (1-car)": <Ic.Car />, "Garage (2-car)": <Ic.Car />,
-    "Swimming Pool": <Ic.Pool />, "Infinity Pool": <Ic.Pool />,
-    "24/7 Security": <Ic.Shield />, "Garden": <Ic.Tree />, "Backup Generator": <Ic.Zap />,
-    "Gym": <Ic.Building />, "Concierge": <Ic.Building />, "Parking": <Ic.Car />,
-    "Parking (2 slots)": <Ic.Car />, "Sky Lounge": <Ic.Building />, "Clean Title": <Ic.FileText />,
-    "Clubhouse Access": <Ic.Building />, "Road Frontage": <Ic.Pin />, "Gated Community": <Ic.Shield />,
-    "Ridge View": <Ic.Tree />, "Bay View": <Ic.Tree />, "Playground": <Ic.Tree />,
-    "PEZA Accredited": <Ic.FileText />, "Fiber Internet Ready": <Ic.Wifi />, "Central A/C": <Ic.Zap />,
-    "Backup Power": <Ic.Zap />, "Rooftop Lounge": <Ic.Building />, "EV Charging": <Ic.Zap />,
-    "Smart Home": <Ic.Zap />, "Retail Podium": <Ic.Building />, "Shuttle Service": <Ic.Car />,
-  };
-
-  const monthly = monthlyMortgage(property.price);
-  const isUnavailable = property.status === "Reserved" || property.status === "Sold";
-
-  const handleRestricted = (action: string) => {
-    if (!isAuthenticated) { onAuthRequired(action); return; }
-    if (action === "Reserve This Property") setShowReservation(true);
-
-  };
-
-  return (
-    <div className="min-h-screen bg-offwhite">
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <button onClick={onBack} className="flex items-center gap-2 text-navy font-semibold text-sm hover:text-emerald transition-colors mb-6">
-          <Ic.ArrowLeft /> Back to Listings
-        </button>
-
-        {/* Gallery — 3 photos: main (left) + interior + bathroom (right column) */}
-        <div className="grid grid-cols-3 gap-2 h-[380px] rounded-2xl overflow-hidden mb-8 relative">
-          <div className="col-span-2 bg-slate-200 cursor-pointer" onClick={() => { setActiveImg(0); setShowAllPhotos(true); }}>
-            <img src={property.images[0]} alt="Exterior" className="w-full h-full object-cover hover:brightness-95 transition" />
-            <span className="absolute bottom-3 left-3 text-[10px] font-bold uppercase tracking-wider bg-navy/70 text-white px-2 py-1 rounded-lg">Exterior</span>
-          </div>
-          <div className="grid grid-rows-2 gap-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="relative bg-slate-200 cursor-pointer" onClick={() => { setActiveImg(i); setShowAllPhotos(true); }}>
-                <img src={property.images[i]} alt={i === 1 ? "Interior" : "Bathroom"} className="w-full h-full object-cover hover:brightness-95 transition" />
-                <span className="absolute bottom-2 left-2 text-[10px] font-bold uppercase tracking-wider bg-navy/70 text-white px-2 py-0.5 rounded-lg">
-                  {i === 1 ? "Interior" : "Bathroom"}
-                </span>
-              </div>
-            ))}
-          </div>
-          <button onClick={() => setShowAllPhotos(true)}
-            className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/90 backdrop-blur text-navy text-xs font-semibold px-3 py-2 rounded-xl shadow hover:bg-white transition">
-            <Ic.Photos /> View All 3 Photos
-          </button>
-        </div>
-
-        {/* Lightbox */}
-        {showAllPhotos && (
-          <div className="fixed inset-0 z-50 bg-navy/95 flex flex-col">
-            <div className="flex items-center justify-between p-4">
-              <p className="text-white/60 text-sm">{activeImg + 1} / {property.images.length}</p>
-              <button onClick={() => setShowAllPhotos(false)} className="text-white/60 hover:text-white"><Ic.X /></button>
-            </div>
-            <div className="flex-1 flex items-center justify-center px-4">
-              <img src={property.images[activeImg]} alt="" className="max-h-full max-w-full object-contain rounded-xl" />
-            </div>
-            <div className="flex gap-2 p-4 justify-center">
-              {property.images.map((img, i) => (
-                <button key={i} onClick={() => setActiveImg(i)} className={`w-14 h-10 rounded-lg overflow-hidden flex-shrink-0 border-2 transition ${activeImg === i ? "border-emerald" : "border-transparent"}`}>
-                  <img src={img} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
-          <div className="space-y-8">
-            <div>
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{property.title}</h1>
-                  <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-1"><Ic.Pin />{property.address}, {property.city}</div>
-                </div>
-                <StatusBadge status={property.status} />
-              </div>
-              <div className="mt-4">
-                <p className="text-3xl font-bold text-navy">{formatPriceFull(property.price)}</p>
-                <p className="text-sm text-slate-500 mt-0.5">Est. <strong className="text-emerald">₱{Math.round(monthly).toLocaleString("en-PH")}/mo</strong> · 20% down · 20yr · 6.5% p.a.</p>
-              </div>
-              <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-slate-100">
-                {[
-                  { label: "Type", value: property.type },
-                  { label: "Lot Area", value: `${property.lotArea} m²` },
-                  property.floorArea ? { label: "Floor Area", value: `${property.floorArea} m²` } : null,
-                  property.beds !== null ? { label: "Bedrooms", value: String(property.beds) } : null,
-                  property.baths !== null ? { label: "Bathrooms", value: String(property.baths) } : null,
-                ].filter(Boolean).map((item) => (
-                  <div key={item!.label} className="text-center bg-slate-50 rounded-xl px-5 py-3">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">{item!.label}</p>
-                    <p className="text-base font-bold text-navy mt-0.5">{item!.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-navy mb-3" style={{ fontFamily: "var(--font-display)" }}>About This Property</h2>
-              <p className="text-slate-600 text-sm leading-relaxed">{property.description}</p>
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-navy mb-4" style={{ fontFamily: "var(--font-display)" }}>Amenities & Features</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {property.amenities.map((a) => (
-                  <div key={a} className="flex items-center gap-2.5 bg-white border border-slate-100 rounded-xl px-3 py-3">
-                    <span className="text-emerald">{amenityIcons[a] ?? <Ic.Check />}</span>
-                    <span className="text-sm text-navy font-medium">{a}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-lg font-bold text-navy mb-3" style={{ fontFamily: "var(--font-display)" }}>Location</h2>
-              <div className="relative bg-slate-100 rounded-2xl h-52 overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&h=400&fit=crop&auto=format" alt="Map" className="w-full h-full object-cover opacity-60" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-white/90 backdrop-blur rounded-xl px-5 py-3 text-center shadow">
-                    <p className="text-sm font-semibold text-navy">{property.city}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Nearby: Schools · Hospitals · Transit</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="hidden lg:block">
-            <div className="sticky top-24 space-y-4">
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
-                  <img src={property.agent.avatar} alt={property.agent.name} className="w-12 h-12 rounded-full object-cover bg-slate-200 flex-shrink-0" />
-                  <div>
-                    <p className="font-bold text-navy text-sm">{property.agent.name}</p>
-                    <p className="text-xs text-slate-500">{property.agent.agency}</p>
-                    <p className="text-xs text-emerald flex items-center gap-1 mt-0.5"><Ic.Phone />{property.agent.phone}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => !isUnavailable && handleRestricted("Reserve This Property")}
-                    disabled={isUnavailable}
-                    className={`w-full py-3 rounded-xl text-sm font-bold transition-colors ${isUnavailable ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-emerald text-navy hover:bg-emerald-600"}`}>
-                    {isUnavailable ? (property.status === "Reserved" ? "Currently Reserved" : "Sold") : "Reserve This Property"}
-                  </button>
-                  <button
-                    onClick={() => setShowChat(true)}
-                    className="w-full py-3 rounded-xl border-2 border-slate-200 text-navy text-sm font-semibold hover:border-navy hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    Chat with Agent
-                  </button>
-                </div>
-              </div>
-              <div className="bg-blush-50 border border-blush-100 rounded-2xl p-4 text-xs text-navy-700">
-                <p className="font-semibold mb-1">Secure Reservation</p>
-                <p>Fully refundable within 7 days if you change your mind.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile sticky footer */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-3 flex gap-2 shadow-xl">
-        <button onClick={() => setShowChat(true)}
-          className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-slate-200 text-navy flex items-center justify-center hover:bg-slate-50 transition-colors">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </button>
-        <button onClick={() => !isUnavailable && handleRestricted("Reserve This Property")} disabled={isUnavailable}
-          className={`flex-1 py-3 rounded-xl text-sm font-bold ${isUnavailable ? "bg-slate-200 text-slate-400" : "bg-emerald text-navy"}`}>
-          {isUnavailable ? (property.status === "Reserved" ? "Currently Reserved" : "Sold") : "Reserve This Property"}
-        </button>
-      </div>
-
-      {showReservation && <ReservationModal property={property} onClose={() => setShowReservation(false)} onReserved={onReserved} />}
-      {showChat && <AgentChatModal agent={property.agent} property={property} onClose={() => setShowChat(false)} />}
-    </div>
-  );
-}
-
-// ─── Buy Page ─────────────────────────────────────────────────────────────────
-function BuyPage({ onSelectProperty }: { onSelectProperty: (p: Property) => void }) {
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [searchLocation, setSearchLocation] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(defaultFilters);
-
-  const categories = ["All", "House", "Condo", "House & Lot", "Lot", "Commercial"];
-  const categoryImages: Record<string, string> = {
-    House:        "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=280&fit=crop&auto=format",
-    Condo:        "https://images.unsplash.com/photo-1722421492323-eaf9c401befe?w=400&h=280&fit=crop&auto=format",
-    "House & Lot":"https://images.unsplash.com/photo-1670589953882-b94c9cb380f5?w=400&h=280&fit=crop&auto=format",
-    Lot:          "https://images.unsplash.com/photo-1628012209120-d9db7abf7eab?w=400&h=280&fit=crop&auto=format",
-    Commercial:   "https://images.unsplash.com/photo-1679364297777-1db77b6199be?w=400&h=280&fit=crop&auto=format",
-  };
-
-  const filtered = PROPERTIES.filter((p) => {
-    if (activeCategory !== "All" && p.type !== activeCategory) return false;
-    if (p.price < filters.minPrice || p.price > filters.maxPrice) return false;
-    if (p.lotArea < filters.minArea || p.lotArea > filters.maxArea) return false;
-    if (filters.beds !== "Any" && p.beds !== null) {
-      if (filters.beds === "5+" ? p.beds < 5 : p.beds !== Number(filters.beds)) return false;
-    }
-    if (searchLocation && !p.city.toLowerCase().includes(searchLocation.toLowerCase()) && !p.address.toLowerCase().includes(searchLocation.toLowerCase())) return false;
-    return true;
-  });
-
-  const activeFiltersCount = [filters.minPrice > 0 || filters.maxPrice < 100_000_000, filters.minArea > 0 || filters.maxArea < 2000, filters.beds !== "Any", filters.baths !== "Any"].filter(Boolean).length;
-
-  return (
-    <>
-      {/* Hero */}
-      <section className="relative bg-navy overflow-hidden">
-        <div className="absolute inset-0">
-          <img src="https://images.unsplash.com/photo-1748063578185-3d68121b11ff?w=1600&h=700&fit=crop&auto=format" alt="Hero" className="w-full h-full object-cover opacity-25" />
-          <div className="absolute inset-0 bg-gradient-to-b from-navy/60 via-navy/80 to-navy" />
-        </div>
-        <div className="relative max-w-4xl mx-auto px-4 pt-16 pb-12 text-center">
-          <p className="text-emerald text-sm font-semibold uppercase tracking-widest mb-3">1,284 Properties Available</p>
-          <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-3" style={{ fontFamily: "var(--font-display)" }}>
-            Find Your Next<br /><em>Dream Property</em>
-          </h1>
-          <p className="text-white/60 text-base mb-8">Search across Metro Manila, Cavite, Laguna, and beyond.</p>
-          <div className="bg-white rounded-2xl shadow-2xl p-3">
-            <div className="flex gap-1 mb-3 overflow-x-auto pb-1">
-              {categories.map((cat) => (
-                <button key={cat} onClick={() => setActiveCategory(cat)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeCategory === cat ? "bg-navy text-white" : "text-slate-500 hover:bg-slate-50 hover:text-navy"}`}>
-                  {cat} <span className={`ml-1 text-xs ${activeCategory === cat ? "text-white/60" : "text-slate-400"}`}>{CATEGORY_COUNTS[cat]}</span>
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Ic.Pin /></span>
-                <input type="text" value={searchLocation} onChange={(e) => setSearchLocation(e.target.value)}
-                  placeholder="City, subdivision, or address"
-                  className="w-full pl-9 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald" />
-              </div>
-              <button onClick={() => setFilterOpen(true)} className="relative flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:border-navy transition-colors">
-                <Ic.Filter /> Filters
-                {activeFiltersCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald text-navy text-[9px] font-bold flex items-center justify-center">{activeFiltersCount}</span>}
-              </button>
-              <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald text-navy text-sm font-bold hover:bg-emerald-600">
-                <Ic.Search /> Search
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Browse by Type */}
-      <section className="max-w-7xl mx-auto px-4 pt-14 pb-4">
-        <div className="flex items-baseline justify-between mb-6">
-          <h2 className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>Browse by Type</h2>
-          <span className="text-sm font-semibold flex items-center gap-1" style={{ color: "#D4A373" }}>All categories <Ic.ChevronRight /></span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {Object.entries(categoryImages).map(([cat, img]) => (
-            <button key={cat} onClick={() => setActiveCategory(cat)}
-              className={`group relative rounded-2xl overflow-hidden aspect-[4/3] border-2 transition-all ${activeCategory === cat ? "border-emerald" : "border-transparent"}`}>
-              <img src={img} alt={cat} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-              <div className="absolute inset-0 bg-gradient-to-t from-navy/80 via-navy/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-3 text-left">
-                <p className="text-white font-bold text-sm">{cat}</p>
-                <p className="text-white/70 text-xs">{CATEGORY_COUNTS[cat]} listings</p>
-              </div>
-              {activeCategory === cat && <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald flex items-center justify-center"><Ic.Check /></div>}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* Listings */}
-      <section className="max-w-7xl mx-auto px-4 pt-10 pb-20">
-        <div className="flex items-baseline justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>
-              {activeCategory === "All" ? "Featured Listings" : `${activeCategory} Properties`}
-            </h2>
-            <p className="text-sm text-slate-500 mt-0.5">{filtered.length} properties found</p>
-          </div>
-          <select className="text-sm border border-slate-200 rounded-xl px-3 py-2 text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald bg-white">
-            <option>Newest First</option><option>Price: Low to High</option><option>Price: High to Low</option>
-          </select>
-        </div>
-        {filtered.length === 0 ? (
-          <div className="text-center py-20 text-slate-400">
-            <Ic.Building />
-            <p className="font-semibold text-lg text-slate-600">No properties match your filters</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((p) => <PropertyCard key={p.id} property={p} onClick={() => onSelectProperty(p)} />)}
-          </div>
-        )}
-      </section>
-
-      <FilterDrawer open={filterOpen} onClose={() => setFilterOpen(false)} filters={filters} setFilters={setFilters} />
-    </>
-  );
-}
-
-// ─── New Developments Page ────────────────────────────────────────────────────
-function NewDevelopmentsPage({ onSelectProperty }: { onSelectProperty: (p: Property) => void }) {
-  const devs = PROPERTIES.filter((p) => p.isNewDevelopment);
-  const phases = [
-    { label: "Launching Soon", tag: "Q4 2026", color: "bg-blue-50 text-blue-700 border-blue-200" },
-    { label: "Under Construction", tag: "Q2 2027", color: "bg-amber-50 text-amber-700 border-amber-200" },
-    { label: "Ready for Occupancy", tag: "2025", color: "bg-blush-50 text-navy-700 border-blush-100" },
-  ];
-
-  return (
-    <div className="min-h-screen bg-offwhite">
-      {/* Hero */}
-      <section className="relative bg-navy overflow-hidden">
-        <div className="absolute inset-0">
-          <img src="https://images.unsplash.com/photo-1679364297777-1db77b6199be?w=1600&h=600&fit=crop&auto=format" alt="New developments" className="w-full h-full object-cover opacity-20" />
-          <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/90 to-navy/60" />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 py-20">
-          <span className="inline-block bg-emerald/20 text-emerald text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-emerald/30 mb-4">New Developments</span>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight" style={{ fontFamily: "var(--font-display)" }}>
-            Pre-Selling &<br /><em>New Projects</em>
-          </h1>
-          <p className="text-white/60 max-w-xl text-base">Lock in at pre-selling prices before public launch. Exclusive early-bird payment terms available on select projects.</p>
-        </div>
-      </section>
-
-      {/* Stats strip */}
-      <div className="bg-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-3 divide-x divide-slate-100">
-          {[["3", "Active Projects"], ["₱5.4M", "Starting Price"], ["2026–2028", "Completion Range"]].map(([val, label]) => (
-            <div key={label} className="text-center px-6">
-              <p className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{val}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Phase legend */}
-      <div className="max-w-7xl mx-auto px-4 pt-10">
-        <div className="flex flex-wrap gap-2 mb-8">
-          {phases.map(({ label, color }) => (
-            <span key={label} className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${color}`}>{label}</span>
-          ))}
-        </div>
-
-        <h2 className="text-2xl font-bold text-navy mb-6" style={{ fontFamily: "var(--font-display)" }}>Available New Projects</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-16">
-          {devs.map((p) => (
-            <div key={p.id} onClick={() => onSelectProperty(p)} className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-              <div className="relative bg-slate-200 aspect-video">
-                <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                <div className="absolute inset-0 bg-gradient-to-t from-navy/60 to-transparent" />
-                <div className="absolute bottom-3 left-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blush text-navy">Pre-Selling · {p.completionDate}</span>
-                </div>
-              </div>
-              <div className="p-5">
-                <h3 className="font-bold text-navy text-base leading-snug">{p.title}</h3>
-                <p className="text-xs text-slate-500 flex items-center gap-1 mt-1"><Ic.Pin />{p.city}</p>
-                <p className="text-xl font-bold text-navy mt-3">{formatPrice(p.price)}</p>
-                <p className="text-xs text-slate-500 mt-0.5">Starting price · {p.type}</p>
-                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100 text-slate-500 text-xs">
-                  {p.beds && <span className="flex items-center gap-1"><Ic.Bed />{p.beds} Beds</span>}
-                  {p.baths && <span className="flex items-center gap-1"><Ic.Bath />{p.baths} Baths</span>}
-                  <span className="flex items-center gap-1"><Ic.Area />{p.lotArea} m²</span>
-                </div>
-                <div className="mt-3">
-                  <p className="text-xs text-slate-400 mb-1">Completion</p>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald rounded-full" style={{ width: p.completionDate === "Q4 2026" ? "65%" : p.completionDate === "Q2 2027" ? "35%" : "20%" }} />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">Est. {p.completionDate}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA Banner */}
-        <div className="bg-navy rounded-3xl p-8 md:p-12 text-center mb-16">
-          <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-display)" }}>Be the First to Know</h2>
-          <p className="text-white/60 text-sm mb-6">Get early access to new project launches before they go public. No spam — just deals.</p>
-          <div className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
-            <input type="email" placeholder="your@email.com" className="flex-1 px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald" />
-            <button className="px-6 py-3 bg-emerald text-navy text-sm font-bold rounded-xl hover:bg-emerald-600 transition-colors">Notify Me</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Agents Page ──────────────────────────────────────────────────────────────
-function AgentsPage() {
-  const [search, setSearch] = useState("");
-  const [selectedSpec, setSelectedSpec] = useState("All");
-
-  const allSpecs = ["All", "Luxury Homes", "Condominiums", "Pre-Selling", "House & Lot", "Commercial", "Land", "BGC", "Makati", "Laguna"];
-  const filtered = AGENTS.filter((a) => {
-    const matchSearch = !search || a.name.toLowerCase().includes(search.toLowerCase()) || a.specialties.some((s) => s.toLowerCase().includes(search.toLowerCase()));
-    const matchSpec = selectedSpec === "All" || a.specialties.some((s) => s.toLowerCase().includes(selectedSpec.toLowerCase()));
-    return matchSearch && matchSpec;
-  });
-
-  return (
-    <div className="min-h-screen bg-offwhite">
-      {/* Hero */}
-      <section className="bg-navy py-16">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <span className="inline-block bg-emerald/20 text-emerald text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-emerald/30 mb-4">Our Team</span>
-          <h1 className="text-4xl font-bold text-white mb-3" style={{ fontFamily: "var(--font-display)" }}>Meet Our<br /><em>Expert Agents</em></h1>
-          <p className="text-white/60 max-w-md mx-auto text-sm">Licensed brokers and property consultants with deep local market expertise.</p>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <div className="bg-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-3 divide-x divide-slate-100">
-          {[["6", "Expert Agents"], ["389", "Properties Sold"], ["56", "Years Combined Exp."]].map(([val, label]) => (
-            <div key={label} className="text-center px-4">
-              <p className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{val}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-10">
-        {/* Search + Filter chips */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1 max-w-sm">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Ic.Search /></span>
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or specialty"
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald" />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {allSpecs.map((s) => (
-              <button key={s} onClick={() => setSelectedSpec(s)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${selectedSpec === s ? "bg-navy text-white border-navy" : "bg-white text-slate-600 border-slate-200 hover:border-navy"}`}>{s}</button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-16">
-          {filtered.map((agent) => (
-            <div key={agent.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-6">
-              <div className="flex items-start gap-4 mb-4">
-                <img src={agent.avatar} alt={agent.name} className="w-16 h-16 rounded-2xl object-cover bg-slate-200 flex-shrink-0" />
-                <div className="min-w-0">
-                  <h3 className="font-bold text-navy text-base">{agent.name}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{agent.title}</p>
-                  <p className="text-xs font-semibold mt-0.5" style={{ color: "#D4A373" }}>{agent.agency}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {[["listings", String(agent.listings), "Listings"], ["sold", String(agent.sold), "Sold"], ["yearsExp", String(agent.yearsExp) + "yr", "Exp."]].map(([k, val, lbl]) => (
-                  <div key={k} className="text-center bg-slate-50 rounded-xl py-2">
-                    <p className="text-base font-bold text-navy">{val}</p>
-                    <p className="text-[10px] text-slate-500">{lbl}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-4">{agent.bio}</p>
-              <div className="flex flex-wrap gap-1 mb-4">
-                {agent.specialties.map((s) => (
-                  <span key={s} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{s}</span>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <a href={`tel:${agent.phone}`} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200 text-navy text-xs font-semibold hover:bg-slate-50 transition-colors">
-                  <Ic.Phone /> Call
-                </a>
-                <a href={`mailto:${agent.email}`} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-navy text-white text-xs font-semibold hover:bg-navy-800 transition-colors">
-                  <Ic.Mail /> Email
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── About Page ───────────────────────────────────────────────────────────────
-function AboutPage({ setPage }: { setPage: (p: Page) => void }) {
-  const milestones = [
-    { year: "2008", label: "Founded in Makati with a team of 3 licensed brokers." },
-    { year: "2012", label: "Expanded to Laguna and Cavite, becoming the leading south-corridor broker." },
-    { year: "2016", label: "Launched AEY Prime digital listings — first PH real estate firm to go paperless." },
-    { year: "2020", label: "Completed ₱2.8B in transactions despite market disruptions." },
-    { year: "2024", label: "Opened satellite offices in Cebu and Clark for national coverage." },
-    { year: "2025", label: "Introduced AEY Prime Escapes: a curated high-value property platform." },
-  ];
-  const values = [
-    { icon: "", title: "Trust & Transparency", body: "Every listing is verified. Every fee is disclosed upfront. No hidden charges, no bait-and-switch." },
-    { icon: "", title: "Client-First Mindset", body: "We measure success by your satisfaction — not commission volume. Our agents earn through repeat referrals, not pressure tactics." },
-    { icon: "", title: "Market Expertise", body: "From BGC condos to Tagaytay lots, our agents hold deep, hyperlocal knowledge earned through years of on-the-ground experience." },
-    { icon: "", title: "Speed & Efficiency", body: "Same-day viewing schedules, 24-hour inquiry turnaround, and digital reservation processing from anywhere in the world." },
-  ];
-
-  return (
-    <div className="min-h-screen bg-offwhite">
-      {/* Hero */}
-      <section className="relative bg-navy overflow-hidden">
-        <div className="absolute inset-0">
-          <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1600&h=700&fit=crop&auto=format" alt="About AEY Prime" className="w-full h-full object-cover opacity-15" />
-          <div className="absolute inset-0 bg-gradient-to-b from-navy/80 to-navy" />
-        </div>
-        <div className="relative max-w-3xl mx-auto px-4 py-24 text-center">
-          <Logo size="lg" />
-          <h1 className="text-4xl md:text-5xl font-bold text-white mt-8 mb-4 leading-tight" style={{ fontFamily: "var(--font-display)" }}>
-            Built on <em>17 Years</em><br />of Philippine Real Estate
-          </h1>
-          <p className="text-white/60 text-base leading-relaxed">AEY Prime Escapes is a full-service real estate brokerage helping Filipinos and global investors find, reserve, and acquire properties across the Philippines — with integrity, clarity, and care.</p>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <div className="bg-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-100">
-          {[["₱18B+", "In Transactions"], ["1,284", "Active Listings"], ["3,200+", "Families Served"], ["17", "Years in Business"]].map(([val, label]) => (
-            <div key={label} className="text-center px-6 py-2">
-              <p className="text-3xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{val}</p>
-              <p className="text-xs text-slate-500 mt-1">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Mission */}
-        <section className="py-16 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-emerald">Our Mission</span>
-            <h2 className="text-3xl font-bold text-navy mt-3 mb-4 leading-snug" style={{ fontFamily: "var(--font-display)" }}>
-              Making Real Estate<br />Accessible & Trustworthy
-            </h2>
-            <p className="text-slate-600 text-sm leading-relaxed mb-4">We believe that finding your home — whether it's your first condo, a vacation lot, or a corporate HQ — should never feel overwhelming, opaque, or predatory.</p>
-            <p className="text-slate-600 text-sm leading-relaxed">AEY Prime Escapes exists to simplify every step: from discovery and site visits to reservation and title transfer. Our team of licensed brokers handles the complexity so you can focus on the decision that matters most.</p>
-          </div>
-          <div className="relative rounded-2xl overflow-hidden h-72 bg-slate-200">
-            <img src="https://images.unsplash.com/photo-1722421492323-eaf9c401befe?w=800&h=500&fit=crop&auto=format" alt="Mission" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-navy/40 to-transparent" />
-          </div>
-        </section>
-
-        {/* Values */}
-        <section className="pb-16">
-          <div className="text-center mb-10">
-            <span className="text-xs font-bold uppercase tracking-widest text-emerald">What We Stand For</span>
-            <h2 className="text-3xl font-bold text-navy mt-3" style={{ fontFamily: "var(--font-display)" }}>Our Core Values</h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {values.map(({ title, body }) => (
-              <div key={title} className="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-md transition-shadow">
-                <h3 className="font-bold text-navy text-base mb-2">{title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">{body}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Timeline */}
-        <section className="pb-16">
-          <div className="text-center mb-10">
-            <span className="text-xs font-bold uppercase tracking-widest text-emerald">Our Story</span>
-            <h2 className="text-3xl font-bold text-navy mt-3" style={{ fontFamily: "var(--font-display)" }}>A Decade and a Half of Growth</h2>
-          </div>
-          <div className="relative">
-            <div className="absolute left-8 top-0 bottom-0 w-px bg-slate-200 hidden sm:block" />
-            <div className="space-y-6">
-              {milestones.map(({ year, label }) => (
-                <div key={year} className="flex gap-6 items-start">
-                  <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-navy flex items-center justify-center">
-                    <span className="font-bold text-sm" style={{ fontFamily: "var(--font-display)", color: "#FCB9B2" }}>{year}</span>
-                  </div>
-                  <div className="bg-white rounded-2xl border border-slate-100 p-4 flex-1">
-                    <p className="text-sm text-slate-700 leading-relaxed">{label}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="pb-16">
-          <div className="bg-navy rounded-3xl p-10 md:p-14 text-center">
-            <h2 className="text-3xl font-bold text-white mb-3" style={{ fontFamily: "var(--font-display)" }}>Ready to Find Your Property?</h2>
-            <p className="text-white/60 mb-7 text-sm">Browse 1,284 verified listings or talk to one of our expert agents today.</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button onClick={() => setPage("buy")} className="px-8 py-3.5 rounded-xl bg-emerald text-navy font-bold text-sm hover:bg-emerald-600 transition-colors">
-                Browse Listings
-              </button>
-              <button onClick={() => setPage("agents")} className="px-8 py-3.5 rounded-xl border border-white/30 text-white font-semibold text-sm hover:bg-white/10 transition-colors">
-                Talk to an Agent
-              </button>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
   );
 }
 
@@ -2332,8 +1879,9 @@ function ReservationDetailDrawer({ rec, onClose, onSelectProperty }: {
   );
 }
 
-function MyReservationsPage({ reservations, onSelectProperty, onBrowse, onCancel }: {
+function MyReservationsPage({ reservations, currentUser, onSelectProperty, onBrowse, onCancel }: {
   reservations: ReservationRecord[];
+  currentUser: { name: string; email: string } | null;
   onSelectProperty: (p: Property) => void;
   onBrowse: () => void;
   onCancel: (id: string) => void;
@@ -2343,6 +1891,9 @@ function MyReservationsPage({ reservations, onSelectProperty, onBrowse, onCancel
   const [cancelReason, setCancelReason] = useState("");
   const [cancelDone, setCancelDone] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "active" | "completed">("all");
+
+  const displayName = currentUser?.name?.trim() || "Guest";
+  const initials = currentUser?.name?.trim()?.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "G";
 
   const STATUS_COLOR: Record<string, string> = {
     "Active": "bg-green-100 text-green-700",
@@ -2363,10 +1914,10 @@ function MyReservationsPage({ reservations, onSelectProperty, onBrowse, onCancel
       <section className="bg-navy py-12">
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-emerald flex items-center justify-center text-navy font-bold text-sm flex-shrink-0">J</div>
+            <div className="w-10 h-10 rounded-full bg-emerald flex items-center justify-center text-navy font-bold text-sm flex-shrink-0">{initials}</div>
             <div>
               <p className="text-white/60 text-xs">Logged in as</p>
-              <p className="text-white font-bold text-sm">Juan dela Cruz</p>
+              <p className="text-white font-bold text-sm">{displayName}</p>
             </div>
           </div>
           <h1 className="text-3xl font-bold text-white mt-4" style={{ fontFamily: "var(--font-display)" }}>My Reservations</h1>
@@ -2568,9 +2119,15 @@ export default function App() {
   const [page, setPage] = useState<Page>("buy");
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
   const [authContext, setAuthContext] = useState<{ property: Property; action: string } | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [reservations, setReservations] = useState<ReservationRecord[]>([]);
+
+  useEffect(() => {
+    setCurrentUser(getStoredCurrentUser());
+    setIsAuthenticated(Boolean(getStoredCurrentUser()));
+  }, []);
 
   const handleSelectProperty = useCallback((p: Property) => {
     setSelectedProperty(p);
@@ -2583,16 +2140,31 @@ export default function App() {
     setPendingAction(action);
   }, [selectedProperty]);
 
-  const handleAuthSuccess = useCallback(() => {
-    setIsAuthenticated(true);
+  const handleAuthSuccess = useCallback((user?: { name: string; email: string }) => {
+    const nextUser = user ?? getStoredCurrentUser();
+    setCurrentUser(nextUser);
+    setIsAuthenticated(Boolean(nextUser));
     setAuthContext(null);
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setStoredCurrentUser(null);
   }, []);
 
   const showPdp = page === "pdp" && selectedProperty;
 
   return (
     <div className="min-h-screen flex flex-col bg-offwhite">
-      <Navbar page={page} setPage={(p) => { setPage(p); if (p !== "pdp") setSelectedProperty(null); }} isAuthenticated={isAuthenticated} onLoginSuccess={() => setIsAuthenticated(true)} />
+      <Navbar
+        page={page}
+        setPage={(p) => { setPage(p); if (p !== "pdp") setSelectedProperty(null); }}
+        isAuthenticated={isAuthenticated}
+        currentUser={currentUser}
+        onLoginSuccess={handleAuthSuccess}
+        onLogout={handleLogout}
+      />
 
       <main className="flex-1">
         {showPdp ? (
@@ -2615,6 +2187,7 @@ export default function App() {
         ) : page === "my-reservations" ? (
           <MyReservationsPage
             reservations={reservations}
+            currentUser={currentUser}
             onSelectProperty={handleSelectProperty}
             onBrowse={() => setPage("buy")}
             onCancel={(id) => setReservations((prev) => prev.filter((r) => r.id !== id))}

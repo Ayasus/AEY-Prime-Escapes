@@ -306,8 +306,15 @@ export const PROPERTIES: Property[] = [
   },
 ];
 
+const AVAILABLE_PROPERTIES = PROPERTIES.filter((property) => property.status !== "Reserved" && property.status !== "Sold");
+
 export const CATEGORY_COUNTS: Record<string, number> = {
-  All: 1284, House: 312, Condo: 487, "House & Lot": 215, Lot: 198, Commercial: 72,
+  All: AVAILABLE_PROPERTIES.length,
+  House: AVAILABLE_PROPERTIES.filter((property) => property.type === "House").length,
+  Condo: AVAILABLE_PROPERTIES.filter((property) => property.type === "Condo").length,
+  "House & Lot": AVAILABLE_PROPERTIES.filter((property) => property.type === "House & Lot").length,
+  Lot: AVAILABLE_PROPERTIES.filter((property) => property.type === "Lot").length,
+  Commercial: AVAILABLE_PROPERTIES.filter((property) => property.type === "Commercial").length,
 };
 
 export function formatPrice(p: number) {
