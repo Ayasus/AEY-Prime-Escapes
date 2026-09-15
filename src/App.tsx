@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   formatPrice, formatPriceFull,
+  AGENTS,
   type Property,
 } from "./data";
 import { supabase } from "./lib/supabase";
@@ -53,6 +54,27 @@ const syncCustomer = async (user: UserProfile) => {
     if (error) console.error("Unable to save customer details:", error.message);
   } catch {
     console.error("Unable to save customer details to the customer table.");
+  }
+};
+
+const syncAgents = async () => {
+  try {
+    const { error } = await supabase.from("AGENTS").upsert(
+      AGENTS.map((agent) => ({
+        agent_id: agent.id,
+        agent_full_name: agent.name,
+        email: agent.email,
+        agent_phone_number: agent.phone,
+        position: agent.title,
+        years_of_experience: agent.yearsExp,
+        specialties_text: agent.specialties.join(", "),
+      })),
+      { onConflict: "agent_id" },
+    );
+
+    if (error) console.error("Unable to save agent details:", error.message);
+  } catch {
+    console.error("Unable to save agent details to the AGENTS table.");
   }
 };
 
@@ -2078,6 +2100,10 @@ export default function App() {
   const [authContext, setAuthContext] = useState<{ property: Property; action: string } | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [reservations, setReservations] = useState<ReservationRecord[]>(() => getStoredReservations(getStoredCurrentUser()?.email));
+
+  useEffect(() => {
+    void syncAgents();
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
