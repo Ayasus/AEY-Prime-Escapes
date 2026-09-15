@@ -46,6 +46,9 @@ The project aims to provide a simple and modern online experience for users who 
 
 ```text
 AEY Prime Escapes/
+│
+├── src/
+│   ├── escapes/
 │   ├── lib/
 │   │   └── supabase.ts
 │   │

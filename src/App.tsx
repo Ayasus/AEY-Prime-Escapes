@@ -15,7 +15,7 @@ import { Ic, Logo, StatusBadge } from "./escapes/common";
 
 // ─── Page type ────────────────────────────────────────────────────────────────
 type Page = "buy" | "new-developments" | "agents" | "about" | "pdp" | "my-reservations";
-type AuthUser = { name: string; email: string; phone: string };
+type UserProfile = { name: string; email: string; phone: string; address: string };
 
 const AUTH_CURRENT_USER_KEY = "aey-prime-current-user";
 const RESERVATIONS_KEY_PREFIX = "aey-prime-reservations-";
@@ -29,93 +29,47 @@ const getAuthErrorMessage = (error?: { message?: string } | null) => {
   return error?.message || "Authentication failed. Please try again.";
 };
 
-const getAuthUserProfile = (user?: { email?: string | null; user_metadata?: { full_name?: string | null; name?: string | null; phone?: string | null } } | null) => {
+const getAuthUserProfile = (user?: { email?: string | null; user_metadata?: { full_name?: string | null; name?: string | null; phone?: string | null; address?: string | null } } | null) => {
   if (!user?.email) return null;
   const email = normalizeEmail(user.email);
   const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split("@")[0];
   const phone = user.user_metadata?.phone?.trim() || "";
-  return { name, email, phone };
+  const address = user.user_metadata?.address?.trim() || "";
+  return { name, email, phone, address };
 };
 
-const syncSupabaseUser = async (user: AuthUser) => {
-  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) return;
-
+const syncCustomer = async (user: UserProfile) => {
   try {
-    const { error } = await supabase.from("profiles").upsert({
-      email: normalizeEmail(user.email),
+    const { error } = await supabase.from("customer").upsert({
+      email: user.email,
       name: user.name,
       phone: user.phone,
+      address: user.address,
     }, { onConflict: "email" });
 
     if (error) throw error;
   } catch {
-    // Fallback to localStorage-only mode if the Supabase table is not ready yet.
+    // Keep authentication usable if the customer table or its policies are unavailable.
   }
 };
 
-const syncAuthProfile = async (user: { name: string; email: string; phone?: string }) => {
-  if (!user.phone) return;
-  await syncSupabaseUser({ name: user.name, email: user.email, phone: user.phone });
-};
-
-const loadSupabaseReservations = async (email?: string | null): Promise<ReservationRecord[]> => {
-  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) return getStoredReservations(email);
-
-  const normalized = normalizeEmail(email);
-  if (!normalized) return [];
-
-  try {
-    const { data, error } = await supabase
-      .from("reservations")
-      .select("reservation_json")
-      .eq("user_email", normalized)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    return (data ?? []).map((row) => row.reservation_json as ReservationRecord).filter(Boolean);
-  } catch {
-    return getStoredReservations(email);
-  }
-};
-
-const syncSupabaseReservation = async (reservation: ReservationRecord, email?: string | null) => {
-  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) return;
-
-  const normalized = normalizeEmail(email);
-  if (!normalized) return;
-
-  try {
-    const { error } = await supabase.from("reservations").upsert({
-      id: reservation.id,
-      user_email: normalized,
-      reservation_json: reservation,
-    }, { onConflict: "id" });
-
-    if (error) throw error;
-  } catch {
-    // Keep localStorage fallback if the table is not present yet.
-  }
-};
-
-const syncSupabaseReservations = async (reservations: ReservationRecord[], email?: string | null) => {
-  if (!reservations.length) return;
-  for (const reservation of reservations) {
-    await syncSupabaseReservation(reservation, email);
-  }
-};
-
-const getStoredCurrentUser = (): { name: string; email: string } | null => {
+const getStoredCurrentUser = (): UserProfile | null => {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(AUTH_CURRENT_USER_KEY);
-    return raw ? (JSON.parse(raw) as { name: string; email: string }) : null;
+    const user = raw ? JSON.parse(raw) as Partial<UserProfile> : null;
+    return user?.email ? {
+      name: user.name || user.email.split("@")[0],
+      email: user.email,
+      phone: user.phone || "",
+      address: user.address || "",
+    } : null;
   } catch {
     return null;
   }
 };
 
-const setStoredCurrentUser = (user: { name: string; email: string } | null) => {
+const setStoredCurrentUser = (user: UserProfile | null) => {
   if (typeof window === "undefined") return;
   if (!user) {
     window.localStorage.removeItem(AUTH_CURRENT_USER_KEY);
@@ -154,14 +108,14 @@ interface AuthModalProps {
   property: Property;
   actionLabel: string;
   onClose: () => void;
-  onSuccess: (user?: { name: string; email: string }) => void;
+  onSuccess: (user?: UserProfile) => void;
 }
 
 function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -196,6 +150,7 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
           data: {
             full_name: form.name.trim(),
             phone: form.phone.trim(),
+            address: form.address.trim(),
           },
         },
       });
@@ -217,14 +172,8 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
         return;
       }
 
-      const localUser: AuthUser = {
-        name: profileUser.name,
-        email: profileUser.email,
-        phone: form.phone.trim(),
-      };
-
-      await syncSupabaseUser(localUser);
-      setStoredCurrentUser({ name: profileUser.name, email: profileUser.email });
+      await syncCustomer(profileUser);
+      setStoredCurrentUser(profileUser);
       onSuccess(profileUser);
       return;
     }
@@ -247,7 +196,8 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
       return;
     }
 
-    setStoredCurrentUser({ name: profileUser.name, email: profileUser.email });
+    await syncCustomer(profileUser);
+    setStoredCurrentUser(profileUser);
     onSuccess(profileUser);
   };
 
@@ -282,7 +232,7 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
           </div>
 
           <div className="mb-5 text-center text-xs text-slate-500">
-            {mode === "login" ? "Use your email and password to continue." : "Create your account using your email address and phone number."}
+            {mode === "login" ? "Use your email and password to continue." : "Create your account using your email, phone number, and address."}
           </div>
 
           {/* Form */}
@@ -306,6 +256,14 @@ function AuthModal({ property, actionLabel, onClose, onSuccess }: AuthModalProps
                 <label className="text-xs font-semibold text-navy block mb-1.5">Phone Number</label>
                 <input type="tel" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="+63 9XX XXX XXXX"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+              </div>
+            )}
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Address</label>
+                <input type="text" required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  placeholder="House number, street, city"
                   className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
               </div>
             )}
@@ -1340,7 +1298,7 @@ function LookingModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Shared Navbar ────────────────────────────────────────────────────────────
-function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (user?: { name: string; email: string }) => void }) {
+function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (user?: UserProfile) => void }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1349,6 +1307,7 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -1366,6 +1325,10 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         setError("Please enter your phone number.");
         return;
       }
+      if (!address.trim()) {
+        setError("Please enter your address.");
+        return;
+      }
       if (password.length < 6) {
         setError("Password must be at least 6 characters long.");
         return;
@@ -1379,7 +1342,7 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: emailValue,
         password,
-        options: { data: { full_name: name.trim(), phone: phone.trim() } },
+        options: { data: { full_name: name.trim(), phone: phone.trim(), address: address.trim() } },
       });
       setLoading(false);
 
@@ -1399,7 +1362,7 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         return;
       }
 
-      await syncSupabaseUser({ name: profileUser.name, email: profileUser.email, phone: phone.trim() });
+      await syncCustomer(profileUser);
       setStoredCurrentUser(profileUser);
       onSuccess(profileUser);
       return;
@@ -1423,6 +1386,7 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
       return;
     }
 
+    await syncCustomer(profileUser);
     setStoredCurrentUser(profileUser);
     onSuccess(profileUser);
   };
@@ -1442,7 +1406,7 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         </div>
         <div className="px-6 py-5">
           <div className="mb-4 text-center text-xs text-slate-500">
-            {mode === "login" ? "Use your email and password to continue." : "Create your account using your email and phone number."}
+            {mode === "login" ? "Use your email and password to continue." : "Create your account using your email, phone number, and address."}
           </div>
           <form onSubmit={handleSubmit} className="space-y-3">
             {mode === "signup" && (
@@ -1461,6 +1425,13 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
               <div>
                 <label className="text-xs font-semibold text-navy block mb-1.5">Phone Number</label>
                 <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+63 9XX XXX XXXX"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
+              </div>
+            )}
+            {mode === "signup" && (
+              <div>
+                <label className="text-xs font-semibold text-navy block mb-1.5">Address</label>
+                <input type="text" required value={address} onChange={(e) => setAddress(e.target.value)} placeholder="House number, street, city"
                   className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald transition" />
               </div>
             )}
@@ -1510,11 +1481,12 @@ function NavLoginModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 }
 
 function Navbar({ page, setPage, isAuthenticated, currentUser, onLoginSuccess, onLogout }: {
-  page: Page; setPage: (p: Page) => void; isAuthenticated: boolean; currentUser: { name: string; email: string } | null; onLoginSuccess: (user?: { name: string; email: string }) => void; onLogout: () => void;
+  page: Page; setPage: (p: Page) => void; isAuthenticated: boolean; currentUser: UserProfile | null; onLoginSuccess: (user?: UserProfile) => void; onLogout: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLooking, setShowLooking] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showUserInfo, setShowUserInfo] = useState(false);
   const navLinks: { label: string; page: Page }[] = [
     { label: "Buy", page: "buy" },
     { label: "New Developments", page: "new-developments" },
@@ -1548,6 +1520,12 @@ function Navbar({ page, setPage, isAuthenticated, currentUser, onLoginSuccess, o
                     <p className="text-[10px] text-slate-500 leading-none mt-0.5">My Reservations</p>
                   </div>
                 </button>
+                <button
+                  onClick={() => setShowUserInfo((visible) => !visible)}
+                  className="hidden sm:inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-slate-600 hover:text-navy hover:bg-slate-50 rounded-xl transition-colors"
+                >
+                  Profile
+                </button>
                 <button onClick={onLogout} className="hidden sm:inline-flex items-center justify-center px-3 py-2 text-sm font-semibold text-slate-600 hover:text-navy hover:bg-slate-50 rounded-xl transition-colors">
                   Logout
                 </button>
@@ -1563,6 +1541,25 @@ function Navbar({ page, setPage, isAuthenticated, currentUser, onLoginSuccess, o
             <button className="md:hidden p-2 text-slate-500" onClick={() => setMobileOpen(!mobileOpen)}><Ic.Menu /></button>
           </div>
         </div>
+        {showUserInfo && isAuthenticated && currentUser && (
+          <div className="absolute right-4 top-[calc(100%+0.5rem)] z-50 w-72 rounded-2xl border border-slate-100 bg-white p-4 shadow-xl">
+            <p className="text-sm font-bold text-navy">{currentUser.name}</p>
+            <div className="mt-3 space-y-2 text-xs">
+              <div>
+                <p className="font-semibold text-slate-400 uppercase tracking-wide">Email</p>
+                <p className="text-slate-600 break-words">{currentUser.email}</p>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-400 uppercase tracking-wide">Phone</p>
+                <p className="text-slate-600">{currentUser.phone || "Not provided"}</p>
+              </div>
+              <div>
+                <p className="font-semibold text-slate-400 uppercase tracking-wide">Address</p>
+                <p className="text-slate-600">{currentUser.address || "Not provided"}</p>
+              </div>
+            </div>
+          </div>
+        )}
         {mobileOpen && (
           <div className="md:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-1">
             {navLinks.map(({ label, page: p }) => (
@@ -2073,7 +2070,7 @@ export default function App() {
   const [page, setPage] = useState<Page>("buy");
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authContext, setAuthContext] = useState<{ property: Property; action: string } | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [reservations, setReservations] = useState<ReservationRecord[]>(() => getStoredReservations(getStoredCurrentUser()?.email));
@@ -2087,7 +2084,7 @@ export default function App() {
 
       const sessionUser = getAuthUserProfile(session?.user ?? null);
       if (sessionUser) {
-        await syncAuthProfile(sessionUser);
+        await syncCustomer(sessionUser);
         setCurrentUser(sessionUser);
         setIsAuthenticated(true);
         setReservations(getStoredReservations(sessionUser.email));
@@ -2104,7 +2101,7 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const nextUser = getAuthUserProfile(session?.user ?? null);
-      void (nextUser && syncAuthProfile(nextUser));
+      if (nextUser) void syncCustomer(nextUser);
       setCurrentUser(nextUser);
       setIsAuthenticated(Boolean(nextUser));
       setReservations(getStoredReservations(nextUser?.email));
@@ -2119,7 +2116,6 @@ export default function App() {
   useEffect(() => {
     if (!currentUser?.email) return;
     saveStoredReservations(reservations, currentUser.email);
-    void syncSupabaseReservations(reservations, currentUser.email);
   }, [reservations, currentUser?.email]);
 
   const handleSelectProperty = useCallback((p: Property) => {
@@ -2133,13 +2129,13 @@ export default function App() {
     setPendingAction(action);
   }, [selectedProperty]);
 
-  const handleAuthSuccess = useCallback(async (user?: { name: string; email: string }) => {
+  const handleAuthSuccess = useCallback((user?: UserProfile) => {
     const nextUser = user ?? getStoredCurrentUser();
+    if (nextUser) void syncCustomer(nextUser);
     setCurrentUser(nextUser);
     setIsAuthenticated(Boolean(nextUser));
     setAuthContext(null);
-    const nextReservations = await loadSupabaseReservations(nextUser?.email);
-    setReservations(nextReservations.length ? nextReservations : getStoredReservations(nextUser?.email));
+    setReservations(getStoredReservations(nextUser?.email));
   }, []);
 
   const handleLogout = useCallback(async () => {
