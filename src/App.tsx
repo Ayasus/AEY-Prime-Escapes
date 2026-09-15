@@ -58,23 +58,55 @@ const syncCustomer = async (user: UserProfile) => {
 };
 
 const syncAgents = async () => {
-  try {
-    const { error } = await supabase.from("AGENTS").upsert(
-      AGENTS.map((agent) => ({
-        agent_id: agent.id,
-        agent_full_name: agent.name,
-        email: agent.email,
-        agent_phone_number: agent.phone,
-        position: agent.title,
-        years_of_experience: agent.yearsExp,
-        specialties_text: agent.specialties.join(", "),
-      })),
-      { onConflict: "agent_id" },
-    );
+  for (const agent of AGENTS) {
+    try {
+      const { data: existingCustomer, error: customerLookupError } = await supabase
+        .from("customer")
+        .select("customer_id")
+        .eq("email", agent.email)
+        .maybeSingle();
 
-    if (error) console.error("Unable to save agent details:", error.message);
-  } catch {
-    console.error("Unable to save agent details to the AGENTS table.");
+      if (customerLookupError) throw customerLookupError;
+
+      let customerId = existingCustomer?.customer_id;
+      if (!customerId) {
+        const { data: newCustomer, error: customerInsertError } = await supabase
+          .from("customer")
+          .insert({
+            full_name: agent.name,
+            email: agent.email,
+            phone_number: agent.phone,
+            address: "",
+          })
+          .select("customer_id")
+          .single();
+
+        if (customerInsertError) throw customerInsertError;
+        customerId = newCustomer.customer_id;
+      }
+
+      const agentDetails = {
+        customer_id: customerId,
+        contact_number: agent.phone,
+        email: agent.email,
+        position: agent.title,
+      };
+      const { data: existingAgent, error: agentLookupError } = await supabase
+        .from("AGENTS")
+        .select("agent_id")
+        .eq("customer_id", customerId)
+        .maybeSingle();
+
+      if (agentLookupError) throw agentLookupError;
+
+      const { error: agentWriteError } = existingAgent
+        ? await supabase.from("AGENTS").update(agentDetails).eq("agent_id", existingAgent.agent_id)
+        : await supabase.from("AGENTS").insert(agentDetails);
+
+      if (agentWriteError) throw agentWriteError;
+    } catch (error) {
+      console.error(`Unable to save agent ${agent.email}:`, error instanceof Error ? error.message : error);
+    }
   }
 };
 
