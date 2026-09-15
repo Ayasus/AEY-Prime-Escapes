@@ -43,17 +43,27 @@ const syncCustomer = async (user: UserProfile) => {
   if (!user.id) return;
 
   try {
-    const { error } = await supabase.from("customer").upsert({
-      customer_id: user.id,
+    const customerDetails = {
       full_name: user.name,
       email: user.email,
       phone_number: user.phone,
       address: user.address,
-    }, { onConflict: "customer_id" });
+    };
+    const { data: existingCustomer, error: lookupError } = await supabase
+      .from("customer")
+      .select("customer_id")
+      .eq("email", user.email)
+      .maybeSingle();
 
-    if (error) console.error("Unable to save customer details:", error.message);
+    if (lookupError) throw lookupError;
+
+    const { error } = existingCustomer
+      ? await supabase.from("customer").update(customerDetails).eq("customer_id", existingCustomer.customer_id)
+      : await supabase.from("customer").insert(customerDetails);
+
+    if (error) throw error;
   } catch {
-    console.error("Unable to save customer details to the customer table.");
+    console.error("Unable to save customer details to the CUSTOMER table. Check its RLS policies and column names.");
   }
 };
 
