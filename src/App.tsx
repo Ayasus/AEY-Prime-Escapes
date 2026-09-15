@@ -15,7 +15,7 @@ import { Ic, Logo, StatusBadge } from "./escapes/common";
 
 // ─── Page type ────────────────────────────────────────────────────────────────
 type Page = "buy" | "new-developments" | "agents" | "about" | "pdp" | "my-reservations";
-type UserProfile = { name: string; email: string; phone: string; address: string };
+type UserProfile = { id: string; name: string; email: string; phone: string; address: string };
 
 const AUTH_CURRENT_USER_KEY = "aey-prime-current-user";
 const RESERVATIONS_KEY_PREFIX = "aey-prime-reservations-";
@@ -29,27 +29,30 @@ const getAuthErrorMessage = (error?: { message?: string } | null) => {
   return error?.message || "Authentication failed. Please try again.";
 };
 
-const getAuthUserProfile = (user?: { email?: string | null; user_metadata?: { full_name?: string | null; name?: string | null; phone?: string | null; address?: string | null } } | null) => {
-  if (!user?.email) return null;
+const getAuthUserProfile = (user?: { id?: string; email?: string | null; user_metadata?: { full_name?: string | null; name?: string | null; phone?: string | null; address?: string | null } } | null) => {
+  if (!user?.id || !user.email) return null;
   const email = normalizeEmail(user.email);
   const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split("@")[0];
   const phone = user.user_metadata?.phone?.trim() || "";
   const address = user.user_metadata?.address?.trim() || "";
-  return { name, email, phone, address };
+  return { id: user.id, name, email, phone, address };
 };
 
 const syncCustomer = async (user: UserProfile) => {
+  if (!user.id) return;
+
   try {
     const { error } = await supabase.from("customer").upsert({
+      customer_id: user.id,
+      full_name: user.name,
       email: user.email,
-      name: user.name,
-      phone: user.phone,
+      phone_number: user.phone,
       address: user.address,
-    }, { onConflict: "email" });
+    }, { onConflict: "customer_id" });
 
-    if (error) throw error;
+    if (error) console.error("Unable to save customer details:", error.message);
   } catch {
-    // Keep authentication usable if the customer table or its policies are unavailable.
+    console.error("Unable to save customer details to the customer table.");
   }
 };
 
@@ -59,6 +62,7 @@ const getStoredCurrentUser = (): UserProfile | null => {
     const raw = window.localStorage.getItem(AUTH_CURRENT_USER_KEY);
     const user = raw ? JSON.parse(raw) as Partial<UserProfile> : null;
     return user?.email ? {
+      id: user.id || "",
       name: user.name || user.email.split("@")[0],
       email: user.email,
       phone: user.phone || "",
