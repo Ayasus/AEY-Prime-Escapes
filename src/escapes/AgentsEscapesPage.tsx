@@ -20,8 +20,8 @@ export default function AgentsPage() {
       </section>
 
       <div className="bg-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-3 divide-x divide-slate-100">
-          {[ ["6", "Expert Agents"], ["389", "Properties Sold"], ["56", "Years Combined Exp."] ].map(([val, label]) => (
+        <div className="max-w-7xl mx-auto px-4 py-5 grid grid-cols-1">
+          {[ ["6", "Expert Agents"] ].map(([val, label]) => (
             <div key={label} className="text-center px-4">
               <p className="text-2xl font-bold text-navy" style={{ fontFamily: "var(--font-display)" }}>{val}</p>
               <p className="text-xs text-slate-500 mt-0.5">{label}</p>
@@ -49,10 +49,6 @@ export default function AgentsPage() {
                   <p className="text-xs text-slate-500 mt-0.5">{agent.title}</p>
                   <p className="text-xs font-semibold mt-0.5" style={{ color: "#D4A373" }}>{agent.agency}</p>
                 </div>
-              </div>
-              <div className="text-center bg-slate-50 rounded-xl py-2 mb-4">
-                <p className="text-base font-bold text-navy">{agent.yearsExp}yr</p>
-                <p className="text-[10px] text-slate-500">Experience</p>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-4">{agent.bio}</p>
               <div className="flex gap-2">
