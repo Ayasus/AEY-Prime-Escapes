@@ -46,24 +46,6 @@ The project aims to provide a simple and modern online experience for users who 
 
 ```text
 AEY Prime Escapes/
-│
-├── .figma/
-│   └── make/
-│
-├── html/
-│   ├── about.html
-│   ├── agents.html
-│   ├── index.html
-│   ├── main.js
-│   ├── my-reservations.html
-│   ├── new-developments.html
-│   ├── property-detail.html
-│   └── styles.css
-│
-├── src/
-│   ├── imports/
-│   │   └── image.png
-│   │
 │   ├── lib/
 │   │   └── supabase.ts
 │   │
