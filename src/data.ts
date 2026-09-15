@@ -29,10 +29,7 @@ export interface Agent {
   phone: string;
   email: string;
   avatar: string;
-  listings: number;
-  sold: number;
   yearsExp: number;
-  specialties: string[];
   bio: string;
 }
 
@@ -43,48 +40,42 @@ export const AGENTS: Agent[] = [
     id: "a1", name: "Maria Santos", title: "Senior Property Consultant",
     agency: "AEY Prime Escapes", phone: PHONE, email: "m.santos@aeyprime.ph",
     avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=200&h=200&fit=crop&auto=format",
-    listings: 24, sold: 87, yearsExp: 12,
-    specialties: ["Luxury Homes", "House & Lot", "Alabang"],
+    yearsExp: 12,
     bio: "Maria has been matching families with their dream homes across the South since 2012. Specializing in Alabang Hills and Filinvest communities, she brings unmatched local market insight and a client-first philosophy.",
   },
   {
     id: "a2", name: "Carlo Reyes", title: "Investment Property Specialist",
     agency: "AEY Prime Escapes", phone: PHONE, email: "c.reyes@aeyprime.ph",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&auto=format",
-    listings: 31, sold: 112, yearsExp: 9,
-    specialties: ["Condominiums", "Pre-Selling", "BGC", "Makati"],
+    yearsExp: 9,
     bio: "Carlo focuses on high-ROI condo investments in the Metro Manila CBD corridor. His deep relationships with Ayala Land and Federal Land give clients early access to pre-selling launches before public release.",
   },
   {
     id: "a3", name: "Grace Lim", title: "Residential Sales Consultant",
     agency: "AEY Prime Escapes", phone: PHONE, email: "g.lim@aeyprime.ph",
     avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&auto=format",
-    listings: 18, sold: 64, yearsExp: 7,
-    specialties: ["House & Lot", "Laguna", "Cavite", "Starter Homes"],
+    yearsExp: 7,
     bio: "Grace guides first-time buyers through every step of the purchase process — from property search to title transfer. Her patience, clarity, and deep Calabarzon knowledge make her the go-to agent for growing families.",
   },
   {
     id: "a4", name: "Ben Aquino", title: "Land & Commercial Broker",
     agency: "AEY Prime Escapes", phone: PHONE, email: "b.aquino@aeyprime.ph",
     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&auto=format",
-    listings: 15, sold: 43, yearsExp: 14,
-    specialties: ["Raw Land", "Commercial", "Tagaytay", "Farm Lots"],
+    yearsExp: 14,
     bio: "With over a decade brokering raw land and commercial assets, Ben has an encyclopedic knowledge of zoning regulations, title processes, and land valuations from Tagaytay to the Bicol region.",
   },
   {
     id: "a5", name: "Diana Cruz", title: "Corporate & Office Specialist",
     agency: "AEY Prime Escapes", phone: PHONE, email: "d.cruz@aeyprime.ph",
     avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop&auto=format",
-    listings: 9, sold: 28, yearsExp: 8,
-    specialties: ["Office Spaces", "PEZA", "BGC", "Ortigas"],
+    yearsExp: 8,
     bio: "Diana works exclusively with corporate clients seeking PEZA-accredited and BPO-ready office spaces in Metro Manila's premier business districts. Former investment banker turned real estate advisor.",
   },
   {
     id: "a6", name: "Marco dela Torre", title: "Property Investment Advisor",
     agency: "AEY Prime Escapes", phone: PHONE, email: "m.delatorre@aeyprime.ph",
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&auto=format",
-    listings: 22, sold: 55, yearsExp: 6,
-    specialties: ["Bay Area", "Pasay", "Paranaque", "Rental Yield"],
+    yearsExp: 6,
     bio: "Marco specializes in the Manila Bay corridor — from Pasay to Parañaque — and is the resident expert on short-term rental investment strategies for condominiums near the airport and entertainment district.",
   },
 ];
